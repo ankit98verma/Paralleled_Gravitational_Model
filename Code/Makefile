@@ -8,8 +8,8 @@
 CUDA_OBJ = cuda.o
 
 # Input Names
-CUDA_FILES = src/blur.cu
-CPP_FILES = src/blur.cpp
+CUDA_FILES = src/grav_cuda.cu
+CPP_FILES = src/grav_cpu.cpp src/grav_run.cpp
 
 # ------------------------------------------------------------------------------
 

@@ -1,8 +1,8 @@
 /*
  * grav_run: Ankit Verma, Garima Aggarwal, 2020
  * 
- * This file runs the CPU implementation and GPU implementation
- * of the gravitational field calculation.
+ * This file contains the code for gravitational field calculation
+ * by using CPU.
  * 
  */
 
@@ -15,11 +15,7 @@
 #include <iostream>
 #include <time.h>
 
-#include <cuda_runtime.h>
-#include <algorithm>
-#include <cassert>
-
-#include "blur.cuh"
+#include "grav_cpu.h"
 
 using std::cerr;
 using std::cout;
@@ -27,8 +23,7 @@ using std::endl;
 
 
 int main(int argc, char **argv) {
-	cout << "Running" << endl;
-    return 1;
+    return large_gauss_test(argc, argv);
 }
 
 

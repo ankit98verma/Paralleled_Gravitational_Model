@@ -1,8 +1,5 @@
 /* 
  * CUDA blur
- * Kevin Yuh, 2014 
- * Revised by Nailen Matschke, 2016
- * Revised by Loko Kung, 2018
  */
 
 #include "blur.cuh"
@@ -16,16 +13,16 @@
 
 
 
-CUDA_CALLABLE
-void template1(...) {
+// CUDA_CALLABLE
+// void template1(...) {
     
-}
+// }
 
-__global__
-void template2(...) {
+// __global__
+// void template2(...) {
     
-}
+// }
 
-float cuda_call_blur_kernel(...) {
+float cuda_call_blur_kernel() {
     return -1;
 }
