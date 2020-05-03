@@ -8,5 +8,7 @@
 #define _GRAV_CPU_H_
 
 
+int get_grav_pot();
+
 
 #endif // CUDA_HEADER_CUH_

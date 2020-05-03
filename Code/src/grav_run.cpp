@@ -19,7 +19,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include "blur.cuh"
+#include "grav_cuda.cuh"
+#include "grav_cpu.h"
 
 using std::cerr;
 using std::cout;
@@ -28,6 +29,10 @@ using std::endl;
 
 int main(int argc, char **argv) {
 	cout << "Running" << endl;
+
+	cuda_call_kernel();
+	get_grav_pot();
+
     return 1;
 }
 

@@ -15,5 +15,5 @@ typedef unsigned int uint;
 
 // float template2(...);
 
-float cuda_call_blur_kernel();
+float cuda_call_kernel();
 #endif

@@ -2,10 +2,12 @@
 # Written by Loko Kung, 2018
 #
 
-# TODO: modify it!
+
+# Directory for object files
+OBJDIR = bin
 
 # Product Names
-CUDA_OBJ = cuda.o
+CUDA_OBJ = $(OBJDIR)/cuda.o
 
 # Input Names
 CUDA_FILES = src/grav_cuda.cu
@@ -41,7 +43,7 @@ NVCC_GENCODES = -gencode arch=compute_30,code=sm_30 \
 		-gencode arch=compute_61,code=compute_61
 
 # CUDA Object Files
-CUDA_OBJ_FILES = $(notdir $(addsuffix .o, $(CUDA_FILES)))
+CUDA_OBJ_FILES = $(addprefix $(OBJDIR)/, $(notdir $(addsuffix .o, $(CUDA_FILES))))
 
 # ------------------------------------------------------------------------------
 
@@ -61,29 +63,21 @@ LIBS = -L$(CUDA_LIB_PATH) -lcudart -lcufft -lsndfile
 # ------------------------------------------------------------------------------
 
 # C++ Object Files
-OBJ_AUDIO = $(addprefix audio-, $(notdir $(addsuffix .o, $(CPP_FILES))))
-OBJ_NOAUDIO = $(addprefix noaudio-, $(notdir $(addsuffix .o, $(CPP_FILES))))
+OBJ = $(addprefix $(OBJDIR)/, $(notdir $(addsuffix .o, $(CPP_FILES))))
 
 # Top level rules
-all: audio noaudio
+all: grav_run
 
-audio: $(OBJ_AUDIO) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
-	$(GPP) $(FLAGS) -o audio-blur $(INCLUDE) $^ $(LIBS) 
-
-noaudio: $(OBJ_NOAUDIO) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
-	$(GPP) $(FLAGS) -o noaudio-blur $(INCLUDE) $^ $(LIBS) 
-
+grav_run: $(OBJ) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
+	$(GPP) $(FLAGS) -o grav_run $(INCLUDE) $^ $(LIBS) 
 
 # Compile C++ Source Files
-audio-%.cpp.o: src/%.cpp
-	$(GPP) $(FLAGS) -D AUDIO_ON=1 -c -o $@ $(INCLUDE) $< 
-
-noaudio-%.cpp.o: src/%.cpp
-	$(GPP) $(FLAGS) -D AUDIO_ON=0 -c -o $@ $(INCLUDE) $< 
+$(OBJDIR)/%.cpp.o: src/%.cpp
+	$(GPP) $(FLAGS) -c -o $@ $(INCLUDE) $< 
 
 
 # Compile CUDA Source Files
-%.cu.o: src/%.cu
+$(OBJDIR)/%.cu.o: src/%.cu
 	$(NVCC) $(NVCC_FLAGS) $(NVCC_GENCODES) -c -o $@ $(NVCC_INCLUDE) $<
 
 cuda: $(CUDA_OBJ_FILES) $(CUDA_OBJ)
@@ -95,7 +89,7 @@ $(CUDA_OBJ): $(CUDA_OBJ_FILES)
 
 # Clean everything including temporary Emacs files
 clean:
-	rm -f audio-blur noaudio-blur *.o *~
+	rm -f grav_run *.o $(OBJDIR)/*.o *~
 	rm -f src/*~
 
 .PHONY: clean

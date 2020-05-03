@@ -22,8 +22,9 @@ using std::cout;
 using std::endl;
 
 
-int main(int argc, char **argv) {
-    return large_gauss_test(argc, argv);
+int get_grav_pot(){
+	cout << "Running from grav_cpu" << endl;
+    return -1;
 }
 
 

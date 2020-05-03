@@ -2,12 +2,17 @@
  * CUDA blur
  */
 
-#include "blur.cuh"
+#include "grav_cuda.cuh"
 
 #include <cstdio>
 #include <cstdlib>
-#include <cuda_runtime.h>
+#include <iostream>
+using std::cerr;
+using std::cout;
+using std::endl;
 
+
+#include <cuda_runtime.h>
 #include "cuda_header.cuh"
 #include "device_launch_parameters.h"
 
@@ -23,6 +28,7 @@
     
 // }
 
-float cuda_call_blur_kernel() {
+float cuda_call_kernel() {
+	cout << "Running from grav_cuda" << endl;
     return -1;
 }
