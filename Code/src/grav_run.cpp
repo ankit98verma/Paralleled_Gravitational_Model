@@ -38,6 +38,7 @@ int check_args(int argc, char **argv){
 int main(int argc, char **argv) {
 	if(check_args(argc, argv))
 		return 1;
+	
 	int depth = atoi(argv[1]);
 	int thread_num = atoi(argv[2]);
 	int block_num = atoi(argv[3]);
