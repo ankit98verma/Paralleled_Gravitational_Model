@@ -30,5 +30,7 @@ using std::endl;
 
 float cuda_call_kernel() {
 	cout << "Running from grav_cuda" << endl;
+	cout<< "Hello Stupid ankit"<<endl;
+	cout<< "Hello Stupid 2ankit"<<endl;
     return -1;
 }
