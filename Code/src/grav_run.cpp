@@ -27,12 +27,28 @@ using std::cout;
 using std::endl;
 
 
+int check_args(int argc, char **argv){
+	if (argc != 4){
+        printf("Usage: ./grav [depth] [thread_per_block] [number_of_blocks]\n");
+        return 1;
+    }
+    return 0;
+}
+
 int main(int argc, char **argv) {
-	cout << "Running" << endl;
+	if(check_args(argc, argv))
+		return 1;
+	int depth = atoi(argv[1]);
+	int thread_num = atoi(argv[2]);
+	int block_num = atoi(argv[3]);
+	
+	cout << "Depth: "<< depth << endl;
+	cout << "Thread per block:"<< thread_num << endl;
+	cout << "Number of blocks:"<< block_num << endl;
+	
+	init_vars(depth, 1);
 
-	cuda_call_kernel();
-	get_grav_pot();
-
+	free_memory();
     return 1;
 }
 

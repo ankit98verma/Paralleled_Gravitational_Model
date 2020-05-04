@@ -1,5 +1,6 @@
-# CS 179 Lab 1 Unix Makefile
+# CS 179 Project Unix Makefile
 # Written by Loko Kung, 2018
+# Modified by Ankit Verma, 2020
 #
 
 
@@ -59,7 +60,7 @@ INCLUDE = -I$(CUDA_INC_PATH)
 LIBS = -L$(CUDA_LIB_PATH) -lcudart -lcufft -lsndfile
 
 # ------------------------------------------------------------------------------
-# Make Rules (Lab 1 specific)
+# Make Rules (Project specific)
 # ------------------------------------------------------------------------------
 
 # C++ Object Files
