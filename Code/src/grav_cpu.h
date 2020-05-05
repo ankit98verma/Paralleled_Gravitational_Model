@@ -7,11 +7,15 @@
 #ifndef _GRAV_CPU_H_
 #define _GRAV_CPU_H_
 
+using std::string;
 
 void init_vars(int depth, int r);
 void create_icoshpere();
 int get_grav_pot();
-int free_memory();
+
+void export_csv(string filename);
+
+void free_memory();
 
 
 #endif // CUDA_HEADER_CUH_

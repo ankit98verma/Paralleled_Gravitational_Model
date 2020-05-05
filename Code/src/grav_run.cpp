@@ -48,6 +48,9 @@ int main(int argc, char **argv) {
 	cout << "Number of blocks:"<< block_num << endl;
 	
 	init_vars(depth, 1);
+	create_icoshpere();
+	export_csv("utilities/data.csv");
+
 
 	free_memory();
     return 1;
