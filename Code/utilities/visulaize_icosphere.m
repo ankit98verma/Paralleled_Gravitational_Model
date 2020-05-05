@@ -13,6 +13,8 @@ x = vertices.x;
 y = vertices.y;
 z = vertices.z;
 
+vertices = [x, y, z];
+
 %%
 % plotting vertices
 % [sx, sy, sz] = sphere(100);

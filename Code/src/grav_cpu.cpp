@@ -35,10 +35,12 @@ float * ico_x;
 float * ico_y;
 float * ico_z;
 int vertices_length;
+int curr_vertices_count;
 
 // Stores the edges of the icosphere
-int * edges;
-int edge_length;
+int * faces;
+int faces_length;
+int curr_faces_count;
 
 // The depth of the icosphere
 int max_depth = 0;
@@ -52,18 +54,21 @@ void init_vars(int depth, int r){
 	radius = r;
 
 	/* Reference: https://en.wikipedia.org/wiki/Geodesic_polyhedron */
-	int T = depth*depth;
-	edge_length = 2*30*T;
+	int T = (depth+1)*(depth+1);
+	faces_length = 3*20*T;
 	vertices_length = 2 + 10*T;
+
+	curr_vertices_count = 0;
+	curr_faces_count = 0;
 	
-	edges = (int *)malloc(edge_length*sizeof(int));
+	faces = (int *)malloc(faces_length*sizeof(int));
 	ico_x = (float *)malloc(vertices_length*sizeof(float));
 	ico_y = (float *)malloc(vertices_length*sizeof(float));
 	ico_z = (float *)malloc(vertices_length*sizeof(float));
 
 	cout << "Depth: " << depth << endl;
 	cout << "Faces: " << 20*T << endl;
-	cout << "Total number of edges: " << edge_length/2 << endl;
+	cout << "Total number of faces: " << faces_length/3 << endl;
 	cout << "Total number of vertices: " << vertices_length << endl;
 
 }
@@ -91,64 +96,89 @@ void init_icosphere(){
 		ico_z[i] = z;
 		ico_z[i+1] = -z;
 
-		edges[c] = 0;
-		edges[c+1] = i;
+		faces[c] = 0;
+		faces[c+1] = i;
+		faces[c+2] = (i+2)%10;
 
-		edges[c+2] = 11;
-		edges[c+3] = i+1;
+		faces[c+3] = 11;
+		faces[c+4] = i+1;
+		if(i+3>10)
+			faces[c+5] = (i+3)%10;
+		else
+			faces[c+5] = i+3;
+		
+		faces[c+6] = i;
+		faces[c+7] = i+1;
+		if(i+2>10)
+			faces[c+8] = (i+2)%10;
+		else
+			faces[c+8] = (i+2);
 
-		edges[c+4] = i;
-		edges[c+5] = i+1;
+		faces[c+9] = i+1;
+		if(i+2>10)
+			faces[c+10] = (i+2)%10;
+		else
+			faces[c+10] = i+2;
+		if(i+3>10)
+			faces[c+11] = (i+3)%10;
+		else
+			faces[c+11] = (i+3);		
 
-		edges[c+6] = i+1;
-		edges[c+7] = (i+2)%10;
-
-		edges[c+8] = i;
-		edges[c+9] = (i+2)%10;
-
-		edges[c+10] = i+1;
-		edges[c+11] = (i+3)%10;
-
-		cout << edges[c]  << endl;
-		cout << edges[c+1] << endl;
-
-
-		cout << edges[c+2] << endl;
-		cout << edges[c+3] << endl;
-
-
-		cout << edges[c+4] << endl;
-		cout << edges[c+5] << endl;
-
-
-		cout << edges[c+6] << endl;
-		cout << edges[c+7] << endl;
-
-
-		cout << edges[c+8] << endl;
-		cout << edges[c+9] << endl;
-
-		cout << edges[c+10] << endl;
-		cout << edges[c+11] << endl;
 
 		hAng1 += H_ANG;
 		hAng2 += H_ANG;
 		c += 12;
 	}
+	cout << "c: "<< c << endl;
 	ico_x[11] = 0;
 	ico_y[11] = 0;
 	ico_z[11] = -radius;
+
+	curr_vertices_count = 12;
+	curr_faces_count = c;
 	
 }
 
 void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 
-	
 	//Todo: generate icosphere of depth
+	for(int i=1; i<=max_depth; i++){
+		cout << "Adding to depth: " << i << endl;
+		float a = curr_faces_count;
+		// go through every edge and divide the edge into half
+		for(int i=0; i< a; i+=2){
+			// int p1 = edges[i];
+			// int p2 = edges[i+1];
 
+			// float mid_x = (ico_x[p1] + ico_x[p2])/2;
+			// float mid_y = (ico_y[p1] + ico_y[p2])/2;
+			// float mid_z = (ico_z[p1] + ico_z[p2])/2;
+			// float scale = radius/sqrtf(mid_x*mid_x + mid_y*mid_y + mid_z*mid_z);
 
+			// mid_x *= scale;
+			// mid_y *= scale;
+			// mid_z *= scale;
 
+			// // add the new vertex 
+			// ico_x[curr_vertices_count] = mid_x;
+			// ico_y[curr_vertices_count] = mid_y;
+			// ico_z[curr_vertices_count] = mid_z;
+
+			// // remove the current edge and insert two new edges
+			// edges[i] = p1;
+			// edges[i+1] = curr_vertices_count;
+
+			// edges[curr_faces_count] = p2;
+			// edges[curr_faces_count+1] = curr_vertices_count;
+
+			// curr_vertices_count++;
+			// curr_faces_count+=2;
+
+			// cout << "curr_vertices_count: " << curr_vertices_count << endl;
+			// cout << "curr_faces_count: " << curr_vertices_count << endl;
+		}
+	}
 }
 
 void export_csv(string filename1, string filename2){
@@ -165,11 +195,16 @@ void export_csv(string filename1, string filename2){
 	ofstream obj_stream2;
 	obj_stream2.open(filename2);
 	obj_stream2 << "x1, y1, z1, x2, y2, z2" << endl;
-	for(int i=0; i< edge_length; i+=2){
-		int p1 = edges[i];
-		int p2 = edges[i+1];
+	for(int i=0; i< curr_faces_count; i+=3){
+		int p1 = faces[i];
+		int p2 = faces[i+1];
+		int p3 = faces[i+2];
 		obj_stream2 << 	ico_x[p1] << ", " << ico_y[p1] << ", " << ico_z[p1] << ", " <<
 						ico_x[p2] << ", " << ico_y[p2] << ", " << ico_z[p2] << endl;
+		obj_stream2 << 	ico_x[p3] << ", " << ico_y[p3] << ", " << ico_z[p3] << ", " <<
+						ico_x[p2] << ", " << ico_y[p2] << ", " << ico_z[p2] << endl;
+		obj_stream2 << 	ico_x[p3] << ", " << ico_y[p3] << ", " << ico_z[p3] << ", " <<
+						ico_x[p1] << ", " << ico_y[p1] << ", " << ico_z[p1] << endl;
 	}
 	obj_stream2.close();
 }
@@ -183,7 +218,7 @@ void free_memory(){
 	free(ico_x);
 	free(ico_y);
 	free(ico_z);
-	free(edges);
+	free(faces);
 }
 
 
