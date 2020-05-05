@@ -107,29 +107,34 @@ void init_icosphere(){
 		edges[c+9] = (i+2)%10;
 
 		edges[c+10] = i+1;
-		edges[c+11] = (i+3)%10;
+		if(i+3 > 10){
+			edges[c+11] = (i+3)%10;	
+		}else{
+			edges[c+11] = (i+3);	
+		}
+		
 
-		cout << edges[c]  << endl;
-		cout << edges[c+1] << endl;
-
-
-		cout << edges[c+2] << endl;
-		cout << edges[c+3] << endl;
-
-
-		cout << edges[c+4] << endl;
-		cout << edges[c+5] << endl;
+		// cout << edges[c]  << endl;
+		// cout << edges[c+1] << endl;
 
 
-		cout << edges[c+6] << endl;
-		cout << edges[c+7] << endl;
+		// cout << edges[c+2] << endl;
+		// cout << edges[c+3] << endl;
 
 
-		cout << edges[c+8] << endl;
-		cout << edges[c+9] << endl;
+		// cout << edges[c+4] << endl;
+		// cout << edges[c+5] << endl;
 
-		cout << edges[c+10] << endl;
-		cout << edges[c+11] << endl;
+
+		// cout << edges[c+6] << endl;
+		// cout << edges[c+7] << endl;
+
+
+		// cout << edges[c+8] << endl;
+		// cout << edges[c+9] << endl;
+
+		// cout << edges[c+10] << endl;
+		// cout << edges[c+11] << endl;
 
 		hAng1 += H_ANG;
 		hAng2 += H_ANG;
