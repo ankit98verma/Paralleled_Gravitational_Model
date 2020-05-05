@@ -48,6 +48,7 @@ int main(int argc, char **argv) {
 	cout << "Number of blocks:"<< block_num << endl;
 	
 	init_vars(depth, 1);
+	init_icosphere();
 	create_icoshpere();
 	export_csv("utilities/data.csv");
 

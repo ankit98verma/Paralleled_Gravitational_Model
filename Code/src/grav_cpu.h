@@ -10,6 +10,8 @@
 using std::string;
 
 void init_vars(int depth, int r);
+void init_icosphere();
+
 void create_icoshpere();
 int get_grav_pot();
 

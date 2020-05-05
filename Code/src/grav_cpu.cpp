@@ -53,24 +53,22 @@ void init_vars(int depth, int r){
 
 	/* Reference: https://en.wikipedia.org/wiki/Geodesic_polyhedron */
 	int T = depth*depth;
-	edge_length = 30*T;
+	edge_length = 2*30*T;
 	vertices_length = 2 + 10*T;
 	
-	edges = (int *)malloc(2*edge_length*sizeof(int));
+	edges = (int *)malloc(edge_length*sizeof(int));
 	ico_x = (float *)malloc(vertices_length*sizeof(float));
 	ico_y = (float *)malloc(vertices_length*sizeof(float));
 	ico_z = (float *)malloc(vertices_length*sizeof(float));
 
 	cout << "Depth: " << depth << endl;
 	cout << "Faces: " << 20*T << endl;
-	cout << "Total number of edges: " << edge_length << endl;
+	cout << "Total number of edges: " << edge_length/2 << endl;
 	cout << "Total number of vertices: " << vertices_length << endl;
 
 }
 
-void create_icoshpere(){
-	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
-
+void init_icosphere(){
 	//Todo: Add initial vertices and edges
 	ico_x[0] = 0;
 	ico_y[0] = 0;
@@ -81,6 +79,8 @@ void create_icoshpere(){
 
 	float hAng1 = PI/2;
 	float hAng2 = PI/2 + H_ANG/2;
+
+	int c = 0;
 	for(int i=1; i<=10; i+=2){
 		ico_x[i] = xy*cosf(hAng1);
 		ico_x[i+1] = xy*cosf(hAng2);
@@ -91,14 +91,62 @@ void create_icoshpere(){
 		ico_z[i] = z;
 		ico_z[i+1] = -z;
 
+		edges[c] = 0;
+		edges[c+1] = i;
+
+		edges[c+2] = 11;
+		edges[c+3] = i+1;
+
+		edges[c+4] = i;
+		edges[c+5] = i+1;
+
+		edges[c+6] = i;
+		edges[c+7] = (i+2)%10;
+
+		edges[c+8] = i+1;
+		edges[c+9] = (i+3)%10;
+
+		// cout << edges[c]  << endl;
+		// cout << edges[c+1] << endl;
+
+
+		// cout << edges[c+2] << endl;
+		// cout << edges[c+3] << endl;
+
+
+		// cout << edges[c+4] << endl;
+		// cout << edges[c+5] << endl;
+
+
+		// cout << edges[c+6] << endl;
+		// cout << edges[c+7] << endl;
+
+
+		// cout << edges[c+8] << endl;
+		// cout << edges[c+9] << endl;
+
 		hAng1 += H_ANG;
 		hAng2 += H_ANG;
+		c += 10;
 	}
 	ico_x[11] = 0;
 	ico_y[11] = 0;
 	ico_z[11] = -radius;
-	//Todo: generate icosphere of depth
+
+
+	cout << "c: " << c << endl;
+
+
 	
+}
+
+void create_icoshpere(){
+	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
+
+	
+	//Todo: generate icosphere of depth
+
+
 
 }
 
