@@ -21,11 +21,29 @@
 
 #include "grav_cuda.cuh"
 #include "grav_cpu.h"
+#include "helper_cuda.h"
 
 using std::cerr;
 using std::cout;
 using std::endl;
 
+
+// (From Eric's code)
+cudaEvent_t start;
+cudaEvent_t stop;
+#define START_TIMER() {                         \
+      CUDA_CALL(cudaEventCreate(&start));       \
+      CUDA_CALL(cudaEventCreate(&stop));        \
+      CUDA_CALL(cudaEventRecord(start));        \
+    }
+
+#define STOP_RECORD_TIMER(name) {                           \
+      CUDA_CALL(cudaEventRecord(stop));                     \
+      CUDA_CALL(cudaEventSynchronize(stop));                \
+      CUDA_CALL(cudaEventElapsedTime(&name, start, stop));  \
+      CUDA_CALL(cudaEventDestroy(start));                   \
+      CUDA_CALL(cudaEventDestroy(stop));                    \
+    }
 
 int check_args(int argc, char **argv){
 	if (argc != 4){
@@ -35,6 +53,21 @@ int check_args(int argc, char **argv){
     return 0;
 }
 
+float time_profile_cpu(int depth, float radius){
+	init_vars(depth, radius);
+	init_icosphere();
+	float cpu_time_ms = -1;
+
+	START_TIMER();
+	
+	create_icoshpere();
+	fill_vertices();
+	
+	STOP_RECORD_TIMER(cpu_time_ms);
+
+	return cpu_time_ms;
+}
+
 int main(int argc, char **argv) {
 	if(check_args(argc, argv))
 		return 1;
@@ -42,17 +75,16 @@ int main(int argc, char **argv) {
 	int depth = atoi(argv[1]);
 	int thread_num = atoi(argv[2]);
 	int block_num = atoi(argv[3]);
+	cout << "\nThread per block:"<< thread_num << endl;
+	cout << "Number of blocks:"<< block_num << "\n" << endl;
 	
-	cout << "Thread per block:"<< thread_num << endl;
-	cout << "Number of blocks:"<< block_num << endl;
+	float cpu_time = time_profile_cpu(depth, 1);
 	
-	init_vars(depth, 1);
-	init_icosphere();
-	create_icoshpere();
-	fill_vertices();
 	export_csv("utilities/vertices.csv", "utilities/edges.csv");
+	cout << "\n\nTime taken by the CPU is: " << cpu_time << " milliseconds\n\n" << endl;
+	
 
-	free_memory();
+	free_cpu_memory();
     return 1;
 }
 

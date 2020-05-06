@@ -45,7 +45,7 @@ GLOBAL int vertices_length;
 GLOBAL int max_depth;
 
 // Information of sphere
-GLOBAL int radius;
+GLOBAL float radius;
 
 GLOBAL float epsilon;
 
@@ -59,7 +59,7 @@ void export_csv(string filename1, string filename2);
 
 int get_grav_pot();
 
-void free_memory();
+void free_cpu_memory();
 
 
 #endif // CUDA_HEADER_CUH_

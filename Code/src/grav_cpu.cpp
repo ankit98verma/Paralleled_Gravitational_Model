@@ -34,7 +34,6 @@ float const H_ANG = PI/180*72;
 float const ELE_ANG = atanf(1.0f / 2);
 
 
-
 void init_vars(int depth, int r){
 	
 	epsilon = 1e-6;
@@ -50,11 +49,11 @@ void init_vars(int depth, int r){
 	curr_faces_count = 0;	
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
 
-	cout << "Depth: " << depth << endl;
+	cout << "\nDepth: " << depth << endl;
 	cout << "Faces: " << faces_length << endl;
-	cout << "Size of faces array: " << faces_length*sizeof(triangle)/4 << " words" << endl;
-	cout << "Number of vertices: "<< vertices_length << endl;
-	cout << "Size of vertices array: " << vertices_length*sizeof(vertices)/4 << " words" << endl;
+	// cout << "Size of faces array: " << faces_length*sizeof(triangle)/4 << " words" << endl;
+	cout << "Number of vertices: "<< vertices_length << "\n" << endl;
+	// cout << "Size of vertices array: " << vertices_length*sizeof(vertices)/4 << " words" << endl;
 }
 
 void init_icosphere(){
@@ -133,14 +132,11 @@ void init_icosphere(){
 		faces[c].v2.y = y4;
 		faces[c].v2.z = -z;
 		c++;
-
-
 	}
 	curr_faces_count = c;
-	cout << "curr_faces_count: " << curr_faces_count << endl;
 }
 
-void get_triangs(triangle tmp, triangle * tri){
+void get_midpoints(triangle tmp, triangle * tri){
 	float x_tmp, y_tmp, z_tmp, scale;
 
 	x_tmp = (tmp.v0.x + tmp.v1.x)/2;
@@ -174,7 +170,7 @@ void create_icoshpere(){
 	triangle triag_tmp;
 	//Todo: generate icosphere of depth
 	for(int j=1; j<=max_depth; j++){
-		cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
+		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
 		int a = curr_faces_count;
 		// go through every edge and divide the edge into half
 		for(int i=0; i<a; i++){
@@ -187,7 +183,7 @@ void create_icoshpere(){
 	        *    P1---*---P2 
 	        *         V[1]  
 	        */ 
-			get_triangs(tri_i, &triag_tmp);
+			get_midpoints(tri_i, &triag_tmp);
 			
 			//adding triangle P0, V[0], V[2]
 			faces[i].v1.x = triag_tmp.v0.x;
@@ -246,7 +242,7 @@ void create_icoshpere(){
 		}
 		
 	}
-	cout << "Final curr face count: "<< curr_faces_count<< endl;
+	// cout << "Final curr face count: "<< curr_faces_count<< endl;
 }
 
 void export_csv(string filename1, string filename2){
@@ -295,7 +291,6 @@ void fill_vertices(){
 			c++;
 		}
 	}
-	cout << "Total number of vertices: " << c << endl;
 }
 
 int get_grav_pot(){
@@ -303,7 +298,7 @@ int get_grav_pot(){
     return -1;
 }
 
-void free_memory(){
+void free_cpu_memory(){
 	free(faces);
 	free(vertices);
 }
