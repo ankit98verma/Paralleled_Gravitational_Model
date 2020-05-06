@@ -16,11 +16,18 @@ using std::string;
 #define GLOBAL  extern
 #endif
 
+struct vertex
+{
+	float x;
+	float y;
+	float z;
+};
+
 struct triangle
 {
-	float x[3];
-	float y[3];
-	float z[3];
+	struct vertex v0;
+	struct vertex v1;
+	struct vertex v2;
 };
 typedef struct triangle triangle;
 
