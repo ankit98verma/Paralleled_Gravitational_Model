@@ -7,6 +7,10 @@
 #ifndef _GRAV_CPU_H_
 #define _GRAV_CPU_H_
 
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+
 using std::string;
 
 #undef  GLOBAL
@@ -57,7 +61,7 @@ void fill_vertices();
 
 void export_csv(string filename1, string filename2);
 
-int get_grav_pot();
+void get_grav_pot(vertex * vertices, int vertices_length);
 
 void free_cpu_memory();
 

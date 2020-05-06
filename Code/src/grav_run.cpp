@@ -62,12 +62,23 @@ float time_profile_cpu(int depth, float radius){
 	
 	create_icoshpere();
 	fill_vertices();
+
+	// Garima TODO: Call Gravitational potential calculating function here
+	// the "vertex * vertices" is an array of vertices a which you have to 
+	// get the gravitational potential. The length of this array is given 
+	// by "vertices_length". 
+	// So pass "vertices" and "vertices_length" to your function.
+	// To access ith vertex use: vertices[i].x, vertices[i].y and vertices[i].z
 	
 	STOP_RECORD_TIMER(cpu_time_ms);
 
 	return cpu_time_ms;
 }
 
+
+float time_profile_gpu(int depth, float radius, int thread_num, int block_num){
+
+}
 int main(int argc, char **argv) {
 	if(check_args(argc, argv))
 		return 1;

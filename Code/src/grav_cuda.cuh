@@ -5,8 +5,8 @@
  * Revised by Loko Kung, 2018
  */
 
-#ifndef BLUR_DEVICE_CUH
-#define BLUR_DEVICE_CUH
+#ifndef _GRAV_CUDA_CUH_
+#define _GRAV_CUDA_CUH_
 
 typedef unsigned int uint;
 #include "cuda_header.cuh"

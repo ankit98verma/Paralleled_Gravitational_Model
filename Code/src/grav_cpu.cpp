@@ -235,12 +235,7 @@ void create_icoshpere(){
 			faces[curr_faces_count].v2.y = triag_tmp.v2.y;
 			faces[curr_faces_count].v2.z = triag_tmp.v2.z;
 			curr_faces_count++;
-
-			if(curr_faces_count > faces_length)
-				cout << "EXCEEDED face count" << endl;
-
 		}
-		
 	}
 	// cout << "Final curr face count: "<< curr_faces_count<< endl;
 }
@@ -293,14 +288,17 @@ void fill_vertices(){
 	}
 }
 
-int get_grav_pot(){
-	cout << "Running from grav_cpu" << endl;
-    return -1;
+// Garima TODO: Implement the function here
+// To access ith vertex use: vertices[i].x, vertices[i].y and vertices[i].z
+void get_grav_pot(vertex * vertices, int vertices_length){
+	cout << "Running from grav_cpu" << endl;   
 }
 
 void free_cpu_memory(){
 	free(faces);
 	free(vertices);
+
+	// Garima TODO: Free any global dynamically allocated variable here
 }
 
 
