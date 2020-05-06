@@ -44,21 +44,17 @@ void init_vars(int depth, int r){
 	radius = r;
 
 	faces_length = 20*pow(4, depth);
-	int edges_len = faces_length*3/2;
-	vertices_length = edges_len - faces_length + 2;
-
-	vertices_x = (float *)malloc(vertices_length*sizeof(triangle));
-	vertices_y = (float *)malloc(vertices_length*sizeof(triangle));
-	vertices_z = (float *)malloc(vertices_length*sizeof(triangle));
-
-	curr_faces_count = 0;
+	vertices_length = (faces_length*3/2) - faces_length + 2;
+	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
 	
+	curr_faces_count = 0;	
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
-	
+
 	cout << "Depth: " << depth << endl;
 	cout << "Faces: " << faces_length << endl;
 	cout << "Size of faces array: " << faces_length*sizeof(triangle)/4 << " words" << endl;
 	cout << "Number of vertices: "<< vertices_length << endl;
+	cout << "Size of vertices array: " << vertices_length*sizeof(vertices)/4 << " words" << endl;
 }
 
 void init_icosphere(){
@@ -259,10 +255,8 @@ void export_csv(string filename1, string filename2){
 	ofstream obj_stream;
 	obj_stream.open(filename1);
 	obj_stream << "x, y, z" << endl;
-	for(int i=0; i< curr_faces_count; i++){
-		obj_stream << faces[i].v0.x << ", " << faces[i].v0.y << ", " << faces[i].v0.z << endl;
-		obj_stream << faces[i].v1.x << ", " << faces[i].v1.y << ", " << faces[i].v1.z << endl;
-		obj_stream << faces[i].v2.x << ", " << faces[i].v2.y << ", " << faces[i].v2.z << endl;
+	for(int i=0; i< vertices_length; i++){
+		obj_stream << vertices[i].x << ", " << vertices[i].y << ", " << vertices[i].z << endl;
 	}
 	obj_stream.close();
 
@@ -281,29 +275,29 @@ void export_csv(string filename1, string filename2){
 	obj_stream2.close();
 }
 
-// void fill_vertices(){
-// 	int c = 0, is_add;
-// 	for(int i=0; i<faces_length; i++){
-// 		for(int j=0; j<c; j++){
-// 			is_add = 1;
-// 			for(int k=0; k<3; k++){
-// 				float t = fabs(faces[i].x[k] - vertices_x[j] + faces[i].y[k] - vertices_y[j] +
-// 					faces[i].z[k] - vertices_z[j]);
-// 				if(t <= 3*epsilon){
-// 					is_add = 0;
-// 					break;
-// 				}
-// 				if(is_add){
-// 					vertices_x[c] = faces[i].x[k];
-// 					vertices_y[c] = faces[i].z[k];
-// 					vertices_z[c] = faces[i].z[k];
-// 					c++;
-// 				}
-// 			}
-// 		}
-// 	}
-// 	cout << "Total number of vertices: " << c << endl;
-// }
+void fill_vertices(){
+	int c = 0, is_add;
+	vertex * all_vs = (vertex *)faces;
+	for(int i=0; i<3*faces_length; i++){
+		is_add = 1;
+		for(int j=0; j<c; j++){
+			float t = 	fabs(all_vs[i].x - vertices[j].x) + fabs(all_vs[i].y - vertices[j].y) +
+						fabs(all_vs[i].z - vertices[j].z);
+			if(t <= 3*epsilon){
+				is_add = 0;
+				break;
+			}
+		}
+		if(is_add){
+			vertices[c].x = all_vs[i].x;
+			vertices[c].y = all_vs[i].y;
+			vertices[c].z = all_vs[i].z;
+			c++;
+		}
+	}
+	cout << "Total number of vertices: " << c << endl;
+}
+
 int get_grav_pot(){
 	cout << "Running from grav_cpu" << endl;
     return -1;
@@ -311,9 +305,7 @@ int get_grav_pot(){
 
 void free_memory(){
 	free(faces);
-	free(vertices_x);
-	free(vertices_y);
-	free(vertices_z);
+	free(vertices);
 }
 
 

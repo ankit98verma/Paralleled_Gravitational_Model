@@ -22,12 +22,13 @@ struct vertex
 	float y;
 	float z;
 };
+typedef struct vertex vertex;
 
 struct triangle
 {
-	struct vertex v0;
-	struct vertex v1;
-	struct vertex v2;
+	vertex v0;
+	vertex v1;
+	vertex v2;
 };
 typedef struct triangle triangle;
 
@@ -37,9 +38,7 @@ GLOBAL int faces_length;
 GLOBAL int curr_faces_count;
 
 // vertices of the icosphere
-GLOBAL float * vertices_x;
-GLOBAL float * vertices_y;
-GLOBAL float * vertices_z;
+GLOBAL vertex * vertices;
 GLOBAL int vertices_length;
 
 // The depth of the icosphere

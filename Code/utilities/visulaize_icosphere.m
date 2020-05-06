@@ -3,7 +3,7 @@ clear all;
 format long;
 
 set(0,'defaultAxesFontSize', 14);
-set(0, 'DefaultLineLineWidth', 1);
+set(0, 'DefaultLineLineWidth', 2);
 
 %%
 epsilon = 1e-6;
@@ -47,11 +47,11 @@ disp(counter);
 % [sx, sy, sz] = sphere(100);
 % surface(sx, sy, sz, 'FaceColor', 'none', 'EdgeColor', 'k');
 hold on;
-% plot3(x, y, z, 'r*');
+plot3(x, y, z, 'r*');
 
 %%
 % plotting edeges
-set(0, 'DefaultLineLineWidth', 2);
+
 
 for i = 1:height(edges)
     x_tmp = [edges.x1(i), edges.x2(i)];

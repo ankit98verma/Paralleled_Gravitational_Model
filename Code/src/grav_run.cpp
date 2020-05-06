@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 	init_vars(depth, 1);
 	init_icosphere();
 	create_icoshpere();
-	// fill_vertices();
+	fill_vertices();
 	export_csv("utilities/vertices.csv", "utilities/edges.csv");
 
 	free_memory();
