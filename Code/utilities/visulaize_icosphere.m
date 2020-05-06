@@ -5,6 +5,8 @@ format long;
 set(0,'defaultAxesFontSize', 14);
 set(0, 'DefaultLineLineWidth', 1);
 
+%%
+epsilon = 1e-6;
 %%      
 vertices = readtable('vertices.csv');  % skips the first three rows of data
 edges = readtable('edges.csv');
@@ -15,6 +17,31 @@ z = vertices.z;
 
 vertices = [x, y, z];
 
+vertices_norm = zeros(size(vertices));
+vertices_norm(1, :) = vertices(1, :);
+counter = 1;
+for i = 1:length(x)
+    tmp_x = vertices(i, 1);
+    tmp_y = vertices(i, 2);
+    tmp_z = vertices(i, 3);
+    
+    add = true;
+    for j = 1:counter
+        tmp_x2 = abs(vertices_norm(j, 1) - tmp_x);
+        tmp_y2 = abs(vertices_norm(j, 2) - tmp_y);
+        tmp_z2 = abs(vertices_norm(j, 3) - tmp_z);
+        t = tmp_x2 + tmp_y2 + tmp_z2;
+        if(t <= 3*epsilon)
+            add = false;
+            break;
+        end
+    end
+    if(add)
+        counter = counter + 1;
+        vertices_norm(counter, :) = vertices(i, :);
+    end
+end
+disp(counter);
 %%
 % plotting vertices
 % [sx, sy, sz] = sphere(100);

@@ -6,6 +6,9 @@
  * 
  */
 
+#ifndef _GRAV_CPU_C_
+	#define _GRAV_CPU_C_
+#endif
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
@@ -30,24 +33,24 @@ float const H_ANG = PI/180*72;
 // elevation = 26.565 degree
 float const ELE_ANG = atanf(1.0f / 2);
 
-// faces of the icosphere
-triangle * faces;
-int faces_length;
-int curr_faces_count;
 
-// The depth of the icosphere
-int max_depth = 0;
-
-// Information of sphere
-int radius;
 
 void init_vars(int depth, int r){
+	
+	epsilon = 1e-6;
+
 	// Todo: allcate the memory for variables
 	max_depth = depth;
 	radius = r;
 
 	faces_length = 20*pow(4, depth);
-	
+	int edges_len = faces_length*3/2;
+	vertices_length = edges_len - faces_length + 2;
+
+	vertices_x = (float *)malloc(vertices_length*sizeof(triangle));
+	vertices_y = (float *)malloc(vertices_length*sizeof(triangle));
+	vertices_z = (float *)malloc(vertices_length*sizeof(triangle));
+
 	curr_faces_count = 0;
 	
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -55,6 +58,7 @@ void init_vars(int depth, int r){
 	cout << "Depth: " << depth << endl;
 	cout << "Faces: " << faces_length << endl;
 	cout << "Size of faces array: " << faces_length*sizeof(triangle)/4 << " words" << endl;
+	cout << "Number of vertices: "<< vertices_length << endl;
 }
 
 void init_icosphere(){
@@ -266,6 +270,29 @@ void export_csv(string filename1, string filename2){
 	obj_stream2.close();
 }
 
+void fill_vertices(){
+	int c = 0, is_add;
+	for(int i=0; i<faces_length; i++){
+		for(int j=0; j<c; j++){
+			is_add = 1;
+			for(int k=0; k<3; k++){
+				float t = fabs(faces[i].x[k] - vertices_x[j] + faces[i].y[k] - vertices_y[j] +
+					faces[i].z[k] - vertices_z[j]);
+				if(t <= 3*epsilon){
+					is_add = 0;
+					break;
+				}
+				if(is_add){
+					vertices_x[c] = faces[i].x[k];
+					vertices_y[c] = faces[i].z[k];
+					vertices_z[c] = faces[i].z[k];
+					c++;
+				}
+			}
+		}
+	}
+	cout << "Total number of vertices: " << c << endl;
+}
 int get_grav_pot(){
 	cout << "Running from grav_cpu" << endl;
     return -1;
@@ -273,6 +300,9 @@ int get_grav_pot(){
 
 void free_memory(){
 	free(faces);
+	free(vertices_x);
+	free(vertices_y);
+	free(vertices_z);
 }
 
 
