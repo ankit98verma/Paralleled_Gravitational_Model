@@ -43,7 +43,6 @@ int main(int argc, char **argv) {
 	int thread_num = atoi(argv[2]);
 	int block_num = atoi(argv[3]);
 	
-	cout << "Depth: "<< depth << endl;
 	cout << "Thread per block:"<< thread_num << endl;
 	cout << "Number of blocks:"<< block_num << endl;
 	

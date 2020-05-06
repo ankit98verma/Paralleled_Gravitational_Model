@@ -9,6 +9,14 @@
 
 using std::string;
 
+struct triangle
+{
+	float x[3];
+	float y[3];
+	float z[3];
+};
+
+typedef struct triangle triangle;
 void init_vars(int depth, int r);
 void init_icosphere();
 
