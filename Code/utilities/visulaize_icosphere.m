@@ -8,18 +8,18 @@ set(0, 'DefaultLineLineWidth', 2);
 %%
 epsilon = 1e-6;
 %%      
-% vertices = readtable('vertices.csv');  % skips the first three rows of data
-% edges = readtable('edges.csv');
+vertices = readtable('vertices.csv');  % skips the first three rows of data
+edges = readtable('edges.csv');
 vertices_sph = readtable('vertices_sph.csv');
 x = vertices.x;
 y = vertices.y;
 z = vertices.z;
 %%
 % histogram of lats
-figure(1);
-histogram(vertices_sph.phi, ceil(2*pi/1e-6));
+figure(1);  
+histogram(vertices_sph.theta, ceil(2*pi/1e-6));
 figure(2);
-plot(vertices_sph.phi);
+plot(vertices_sph.theta);
 %%
 % plotting vertices
 figure(3);

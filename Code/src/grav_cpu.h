@@ -54,6 +54,9 @@ GLOBAL vertex * vertices;
 GLOBAL point_sph * vertices_sph;
 GLOBAL int vertices_length;
 
+GLOBAL int * common_thetas_count;
+GLOBAL int common_thetas_length;
+
 // The depth of the icosphere
 GLOBAL int max_depth;
 
@@ -68,6 +71,7 @@ void init_icosphere();
 void create_icoshpere();
 void fill_vertices();
 void quickSort_points(int low, int high);
+void fill_common_theta();
 
 void export_csv(string filename1, string filename2, string filename3);
 

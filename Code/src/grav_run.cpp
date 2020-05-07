@@ -63,6 +63,7 @@ float time_profile_cpu(int depth, float radius){
 	create_icoshpere();
 	fill_vertices();
 	quickSort_points(0, vertices_length-1);
+	fill_common_theta();
 
 	// Garima TODO: Call Gravitational potential calculating function here
 	// the "vertex * vertices" is an array of vertices a which you have to 

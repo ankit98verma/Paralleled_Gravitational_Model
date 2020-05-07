@@ -43,9 +43,11 @@ void init_vars(int depth, int r){
 	radius = r;
 
 	faces_length = 20*pow(4, depth);
-	vertices_length = (faces_length*3/2) - faces_length + 2;
+	vertices_length = faces_length/2 + 2;
 	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
 	vertices_sph = (point_sph *)malloc(vertices_length*sizeof(point_sph));
+	common_thetas_count = (int *)malloc(vertices_length*sizeof(int));
+	common_thetas_length = 0;
 	
 	curr_faces_count = 0;	
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -297,15 +299,15 @@ void fill_vertices(){
 	}
 }
 
-int partition (point_sph * arr, int low, int high)  
-{  
+int partition(point_sph * arr, int low, int high)  {  
+
     point_sph pivot = arr[high]; // pivot  
     int i = (low - 1); // Index of smaller element  
   	point_sph tmp;
     for (int j = low; j <= high - 1; j++)  
     {  
         // If current element is smaller than the pivot  
-        if (arr[j].phi < pivot.phi)  
+        if (arr[j].theta < pivot.theta)  
         {  
             i++; // increment index of smaller element  
             tmp = arr[i];
@@ -333,9 +335,26 @@ void quickSort_points(int low, int high)
     
 }  
 
+void fill_common_theta(){
+	float prev = vertices_sph[0].theta;
+	common_thetas_count[common_thetas_length]++;
+	for(int i=1; i<vertices_length; i++){
+		if(fabs(prev - vertices_sph[i].theta) > epsilon){
+			common_thetas_length++;
+			prev = vertices_sph[i].theta;
+		}
+		common_thetas_count[common_thetas_length]++;
+	}
+}
+
 // Garima TODO: Implement the function here
-// To access ith vertex use: vertices[i].x, vertices[i].y and vertices[i].z
-void get_grav_pot(vertex * vertices, int vertices_length){
+
+void get_grav_pot(){
+	// To access ith vertex use: vertices_sph[i].r, vertices_sph[i].theta and vertices_sph[i].phi
+	// The vertices_sph are sorted with respect to theta
+	// common_thetas_count gives the count of thetas with epsilon = 1e-6. 
+	// common_thetas_length gives the length of the common_thetas_count array.
+	// Hence common_thetas_length effectively gives total number of unique thetas present in vertices_sph array
 	cout << "Running from grav_cpu" << endl;   
 }
 
