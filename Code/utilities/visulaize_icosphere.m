@@ -10,40 +10,19 @@ epsilon = 1e-6;
 %%      
 vertices = readtable('vertices.csv');  % skips the first three rows of data
 edges = readtable('edges.csv');
-
+vertices_sph = readtable('vertices_sph.csv');
 x = vertices.x;
 y = vertices.y;
 z = vertices.z;
-
-vertices = [x, y, z];
-
-vertices_norm = zeros(size(vertices));
-vertices_norm(1, :) = vertices(1, :);
-counter = 1;
-for i = 1:length(x)
-    tmp_x = vertices(i, 1);
-    tmp_y = vertices(i, 2);
-    tmp_z = vertices(i, 3);
-    
-    add = true;
-    for j = 1:counter
-        tmp_x2 = abs(vertices_norm(j, 1) - tmp_x);
-        tmp_y2 = abs(vertices_norm(j, 2) - tmp_y);
-        tmp_z2 = abs(vertices_norm(j, 3) - tmp_z);
-        t = tmp_x2 + tmp_y2 + tmp_z2;
-        if(t <= 3*epsilon)
-            add = false;
-            break;
-        end
-    end
-    if(add)
-        counter = counter + 1;
-        vertices_norm(counter, :) = vertices(i, :);
-    end
-end
-disp(counter);
+%%
+% histogram of lats
+figure(1);  
+histogram(vertices_sph.theta, ceil(2*pi/1e-6));
+figure(2);
+plot(vertices_sph.theta);
 %%
 % plotting vertices
+figure(3);
 % [sx, sy, sz] = sphere(100);
 % surface(sx, sy, sz, 'FaceColor', 'none', 'EdgeColor', 'k');
 hold on;
@@ -51,8 +30,6 @@ plot3(x, y, z, 'r*');
 
 %%
 % plotting edeges
-
-
 for i = 1:height(edges)
     x_tmp = [edges.x1(i), edges.x2(i)];
     y_tmp = [edges.y1(i), edges.y2(i)];

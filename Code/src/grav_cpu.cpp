@@ -43,8 +43,11 @@ void init_vars(int depth, int r){
 	radius = r;
 
 	faces_length = 20*pow(4, depth);
-	vertices_length = (faces_length*3/2) - faces_length + 2;
+	vertices_length = faces_length/2 + 2;
 	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
+	vertices_sph = (point_sph *)malloc(vertices_length*sizeof(point_sph));
+	common_thetas_count = (int *)malloc(vertices_length*sizeof(int));
+	common_thetas_length = 0;
 
 	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -240,16 +243,21 @@ void create_icoshpere(){
 	// cout << "Final curr face count: "<< curr_faces_count<< endl;
 }
 
-void export_csv(string filename1, string filename2){
+void export_csv(string filename1, string filename2, string filename3){
 	cout << "Exporting: " << filename1 << ", " << filename2 <<endl;
 
 	ofstream obj_stream;
 	obj_stream.open(filename1);
 	obj_stream << "x, y, z" << endl;
+	ofstream obj_stream3;
+	obj_stream3.open(filename3);
+	obj_stream3 << "r, theta, phi" << endl;
 	for(int i=0; i< vertices_length; i++){
 		obj_stream << vertices[i].x << ", " << vertices[i].y << ", " << vertices[i].z << endl;
+		obj_stream3 << 	vertices_sph[i].r << ", " << vertices_sph[i].theta << ", " << vertices_sph[i].phi << endl;
 	}
 	obj_stream.close();
+	obj_stream3.close();
 
 	ofstream obj_stream2;
 	obj_stream2.open(filename2);
@@ -283,21 +291,76 @@ void fill_vertices(){
 			vertices[c].x = all_vs[i].x;
 			vertices[c].y = all_vs[i].y;
 			vertices[c].z = all_vs[i].z;
+			vertices_sph[c].r = 1;
+			vertices_sph[c].theta = atan2f(vertices[c].z, sqrtf(vertices[c].x*vertices[c].x + vertices[c].y*vertices[c].y));
+			vertices_sph[c].phi = atan2f(vertices[c].y, vertices[c].x);
 			c++;
 		}
 	}
 }
 
+int partition(point_sph * arr, int low, int high)  {
+
+    point_sph pivot = arr[high]; // pivot
+    int i = (low - 1); // Index of smaller element
+  	point_sph tmp;
+    for (int j = low; j <= high - 1; j++)
+    {
+        // If current element is smaller than the pivot
+        if (arr[j].theta < pivot.theta)
+        {
+            i++; // increment index of smaller element
+            tmp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = tmp;
+        }
+    }
+    tmp = arr[high];
+    arr[high] = arr[i+1];
+    arr[i+1] = tmp;
+    return (i + 1);
+}
+void quickSort_points(int low, int high)
+{
+	if(low < high){
+		/* pi is partitioning index, arr[p] is now
+	    at right place */
+	    int pi = partition(vertices_sph, low, high);
+
+	    // Separately sort elements before
+	    // partition and after partition
+	    quickSort_points(low, pi - 1);
+	    quickSort_points(pi + 1, high);
+	}
+
+}
+
+void fill_common_theta(){
+	float prev = vertices_sph[0].theta;
+	common_thetas_count[common_thetas_length]++;
+	for(int i=1; i<vertices_length; i++){
+		if(fabs(prev - vertices_sph[i].theta) > epsilon){
+			common_thetas_length++;
+			prev = vertices_sph[i].theta;
+		}
+		common_thetas_count[common_thetas_length]++;
+	}
+}
+
 // Garima TODO: Implement the function here
-// To access ith vertex use: vertices[i].x, vertices[i].y and vertices[i].z
-void get_grav_pot(vertex * vertices, int vertices_length){
+void get_grav_pot(){
+	// To access ith vertex use: vertices_sph[i].r, vertices_sph[i].theta and vertices_sph[i].phi
+	// The vertices_sph are sorted with respect to theta
+	// common_thetas_count gives the count of thetas with epsilon = 1e-6.
+	// common_thetas_length gives the length of the common_thetas_count array.
+	// Hence common_thetas_length effectively gives total number of unique thetas present in vertices_sph array
 	cout << "Running from grav_cpu" << endl;
 }
 
 void free_cpu_memory(){
 	free(faces);
 	free(vertices);
-
+	free(vertices_sph);
 	// Garima TODO: Free any global dynamically allocated variable here
 }
 
