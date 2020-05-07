@@ -28,6 +28,14 @@ struct vertex
 };
 typedef struct vertex vertex;
 
+struct point_sph
+{
+	float r;
+	float theta;
+	float phi;
+};
+typedef struct point_sph point_sph;
+
 struct triangle
 {
 	vertex v0;
@@ -43,6 +51,7 @@ GLOBAL int curr_faces_count;
 
 // vertices of the icosphere
 GLOBAL vertex * vertices;
+GLOBAL point_sph * vertices_sph;
 GLOBAL int vertices_length;
 
 // The depth of the icosphere
@@ -58,8 +67,9 @@ void init_icosphere();
 
 void create_icoshpere();
 void fill_vertices();
+void quickSort_points(int low, int high);
 
-void export_csv(string filename1, string filename2);
+void export_csv(string filename1, string filename2, string filename3);
 
 void get_grav_pot(vertex * vertices, int vertices_length);
 

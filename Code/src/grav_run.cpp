@@ -62,6 +62,7 @@ float time_profile_cpu(int depth, float radius){
 	
 	create_icoshpere();
 	fill_vertices();
+	quickSort_points(0, vertices_length-1);
 
 	// Garima TODO: Call Gravitational potential calculating function here
 	// the "vertex * vertices" is an array of vertices a which you have to 
@@ -77,7 +78,7 @@ float time_profile_cpu(int depth, float radius){
 
 
 float time_profile_gpu(int depth, float radius, int thread_num, int block_num){
-
+	return -1;
 }
 int main(int argc, char **argv) {
 	if(check_args(argc, argv))
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
 	
 	float cpu_time = time_profile_cpu(depth, 1);
 	
-	export_csv("utilities/vertices.csv", "utilities/edges.csv");
+	export_csv("utilities/vertices.csv", "utilities/edges.csv", "utilities/vertices_sph.csv");
 	cout << "\n\nTime taken by the CPU is: " << cpu_time << " milliseconds\n\n" << endl;
 	
 
