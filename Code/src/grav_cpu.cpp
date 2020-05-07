@@ -1,9 +1,9 @@
 /*
  * grav_run: Ankit Verma, Garima Aggarwal, 2020
- * 
+ *
  * This file contains the code for gravitational field calculation
  * by using CPU.
- * 
+ *
  */
 
 #ifndef _GRAV_CPU_C_
@@ -32,10 +32,10 @@ using std::string;
 float const H_ANG = PI/180*72;
 // elevation = 26.565 degree
 float const ELE_ANG = atanf(1.0f / 2);
-
+int curr_faces_count;
 
 void init_vars(int depth, int r){
-	
+
 	epsilon = 1e-6;
 
 	// Todo: allcate the memory for variables
@@ -45,8 +45,8 @@ void init_vars(int depth, int r){
 	faces_length = 20*pow(4, depth);
 	vertices_length = (faces_length*3/2) - faces_length + 2;
 	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
-	
-	curr_faces_count = 0;	
+
+	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
 
 	cout << "\nDepth: " << depth << endl;
@@ -84,11 +84,11 @@ void init_icosphere(){
 		faces[c].v0.x = 0;
 		faces[c].v0.y = 0;
 		faces[c].v0.z = radius;
-		
+
 		faces[c].v1.x = x1;
 		faces[c].v1.y = y1;
 		faces[c].v1.z = z;
-		
+
 		faces[c].v2.x = x3;
 		faces[c].v2.y = y3;
 		faces[c].v2.z = z;
@@ -175,16 +175,16 @@ void create_icoshpere(){
 		// go through every edge and divide the edge into half
 		for(int i=0; i<a; i++){
 			triangle tri_i = faces[i];
-			/* compute 3 new vertices by spliting half on each edge
-	        *         P0       
-	        *        / \       
+			/* compute 3 new vertices by splitting half on each edge
+	        *         P0
+	        *        / \
 	        *  V[0] *---* V[2]
-	        *      / \ / \     
-	        *    P1---*---P2 
-	        *         V[1]  
-	        */ 
+	        *      / \ / \
+	        *    P1---*---P2
+	        *         V[1]
+	        */
 			get_midpoints(tri_i, &triag_tmp);
-			
+
 			//adding triangle P0, V[0], V[2]
 			faces[i].v1.x = triag_tmp.v0.x;
 			faces[i].v1.y = triag_tmp.v0.y;
@@ -221,7 +221,7 @@ void create_icoshpere(){
 			faces[curr_faces_count].v2.y = triag_tmp.v2.y;
 			faces[curr_faces_count].v2.z = triag_tmp.v2.z;
 			curr_faces_count++;
-			
+
 			//adding triangle V[0], V[1], V[2]
 			faces[curr_faces_count].v0.x = triag_tmp.v0.x;
 			faces[curr_faces_count].v0.y = triag_tmp.v0.y;
@@ -291,7 +291,7 @@ void fill_vertices(){
 // Garima TODO: Implement the function here
 // To access ith vertex use: vertices[i].x, vertices[i].y and vertices[i].z
 void get_grav_pot(vertex * vertices, int vertices_length){
-	cout << "Running from grav_cpu" << endl;   
+	cout << "Running from grav_cpu" << endl;
 }
 
 void free_cpu_memory(){

@@ -1,4 +1,4 @@
-/* 
+/*
  * CPU implementation of gravitational field calculator
  * header file.
  */
@@ -39,7 +39,6 @@ typedef struct triangle triangle;
 // faces of the icosphere
 GLOBAL triangle * faces;
 GLOBAL int faces_length;
-GLOBAL int curr_faces_count;
 
 // vertices of the icosphere
 GLOBAL vertex * vertices;
