@@ -48,6 +48,7 @@ void init_vars(int depth, int r){
 	vertices_sph = (point_sph *)malloc(vertices_length*sizeof(point_sph));
 	common_thetas_count = (int *)malloc(vertices_length*sizeof(int));
 	common_thetas_length = 0;
+	potential = (float*) malloc(vertices_length*sizeof(float));
 
 	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -347,21 +348,103 @@ void fill_common_theta(){
 	}
 }
 
-// Garima TODO: Implement the function here
+void find_sin_array(float theta, float* sine_array){
+    // COMPUTES the sin array to be used
+    // sin_array = (1, sin(theta), (sin(theta))^2, (sin(theta))^3, (sin(theta))^4/...)
+    // powers needed till (sin(theta))^10--- therefore 12 components
+    sine_array[0] = 1;
+
+    for (int i=1; i<11; i++){
+        sine_array[i] = sine_array[i-1]*sin(theta);
+    }
+}
+
+void legendre(float theta, float* P){
+    // COMPUTE P_n(sin(that))
+    float sine_array[11];
+    find_sin_array(theta, sine_array);
+
+    P[0] = 0;
+    P[1] = 0;
+    P[2] = 0;
+    P[3] = 2.5*sine_array[3] - 1.5*sine_array[1];
+    P[4] = (35*sine_array[4] - 30*sine_array[2] + 3)/8;
+    P[5] = (63*sine_array[5] - 70*sine_array[3] + 15*sine_array[1])/8;
+    P[6] = (231*sine_array[6] - 315*sine_array[4] + 105*sine_array[2] - 5)/16;
+    P[7] = (429*sine_array[7] - 693*sine_array[5] + 315*sine_array[3] - 35*sine_array[1])/16;
+    P[8] = (6435*sine_array[8] - 12012*sine_array[6] + 6930*sine_array[4] - 1260*sine_array[2] + 35)/128;
+    P[9] = (12155*sine_array[9] - 25740*sine_array[7] + 18018*sine_array[5] - 4620*sine_array[3] + 315*sine_array[1])/128;
+    P[10] = (46189*sine_array[10] - 109395*sine_array[8] + 90090*sine_array[6] - 30030*sine_array[4] + 3465*sine_array[2] - 63)/256;
+}
+
+void potential_cal_ZONAL(float theta, float* pot_coeff){
+    // INPUT: r- radius vector magnitude
+    // theta - latitude in radians
+    // NOTE: Zonal harmonic is a function of theta alone
+    float LEGENDRE[11];
+    legendre(theta, LEGENDRE);
+
+    float ZONAL_J[11] = {0, 0, 0, 0.2541e-05, 0.1617999e-05, 0.22800004e-06, -0.5519908e-06, 0.3519996e-6, 0.2049998e-06, 0.153999e-06, 0.23699982e-06};
+
+    for (int i=0; i<11; i++){
+        pot_coeff[i] = ZONAL_J[i]*LEGENDRE[i];
+    }
+}
+
+void cummulative_theta_count(){
+    // Finds the cumulative of common_theta_count and store in cummulative_common_theta_count
+    cummulative_common_theta_count= (int *)malloc(common_thetas_length*sizeof(int));
+    cummulative_common_theta_count[0] = common_thetas_count[0];
+    for (int i=1; i<common_thetas_length; i++){
+       cummulative_common_theta_count[i] = common_thetas_count[i] + cummulative_common_theta_count[i-1];
+    }
+
+}
+
 void get_grav_pot(){
-	// To access ith vertex use: vertices_sph[i].r, vertices_sph[i].theta and vertices_sph[i].phi
+    // To access ith vertex use: vertices_sph[i].r, vertices_sph[i].theta and vertices_sph[i].phi
 	// The vertices_sph are sorted with respect to theta
 	// common_thetas_count gives the count of thetas with epsilon = 1e-6.
 	// common_thetas_length gives the length of the common_thetas_count array.
 	// Hence common_thetas_length effectively gives total number of unique thetas present in vertices_sph array
-	cout << "Running from grav_cpu" << endl;
+
+    cummulative_theta_count();
+
+	// Get potential coeff
+	float pot_coeff[11];
+
+	for (int i=0; i<common_thetas_length; i++)
+    {
+        int Theta_indice = cummulative_common_theta_count[i];
+        float THETA = vertices_sph[Theta_indice-1].theta; // Finds the common theta value
+        potential_cal_ZONAL(THETA, pot_coeff);
+
+        if (i==0){
+            for (int j=0; j<cummulative_common_theta_count[i]; j++){
+                potential[j] = 0;
+                for (int k=3; k<11; k++)
+                    potential[j] = potential[j] + pot_coeff[k]/pow(vertices_sph[j].r,k+1);
+//                cout<<"\n potential" <<j <<'\t'<<potential[j];
+            }
+        }
+        else{
+             for (int j=cummulative_common_theta_count[i-1]; j<cummulative_common_theta_count[i]; j++){
+                potential[j] = 0;
+                for (int k=3; k<11; k++)
+                    potential[j] = potential[j] + pot_coeff[k]/pow(vertices_sph[j].r,k+1);
+//                cout<<"\n potential" <<j <<'\t'<<potential[j];
+            }
+        }
+    }
 }
 
 void free_cpu_memory(){
 	free(faces);
 	free(vertices);
 	free(vertices_sph);
-	// Garima TODO: Free any global dynamically allocated variable here
+	free(potential);
+	free(cummulative_common_theta_count);
+	free(common_thetas_count);
 }
 
 

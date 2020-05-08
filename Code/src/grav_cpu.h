@@ -52,8 +52,10 @@ GLOBAL int faces_length;
 GLOBAL vertex * vertices;
 GLOBAL point_sph * vertices_sph;
 GLOBAL int vertices_length;
+GLOBAL float * potential;
 
 GLOBAL int * common_thetas_count;
+GLOBAL int * cummulative_common_theta_count;
 GLOBAL int common_thetas_length;
 
 // The depth of the icosphere
@@ -74,7 +76,8 @@ void fill_common_theta();
 
 void export_csv(string filename1, string filename2, string filename3);
 
-void get_grav_pot(vertex * vertices, int vertices_length);
+//void get_grav_pot(vertex * vertices, int vertices_length);
+void get_grav_pot();
 
 void free_cpu_memory();
 

@@ -1,9 +1,9 @@
 /*
  * grav_run: Ankit Verma, Garima Aggarwal, 2020
- * 
+ *
  * This file runs the CPU implementation and GPU implementation
  * of the gravitational field calculation.
- * 
+ *
  */
 
 #include <cstdio>
@@ -59,19 +59,19 @@ float time_profile_cpu(int depth, float radius){
 	float cpu_time_ms = -1;
 
 	START_TIMER();
-	
+
 	create_icoshpere();
 	fill_vertices();
 	quickSort_points(0, vertices_length-1);
 	fill_common_theta();
-
+    get_grav_pot();
 	// Garima TODO: Call Gravitational potential calculating function here
-	// the "vertex * vertices" is an array of vertices a which you have to 
-	// get the gravitational potential. The length of this array is given 
-	// by "vertices_length". 
+	// the "vertex * vertices" is an array of vertices a which you have to
+	// get the gravitational potential. The length of this array is given
+	// by "vertices_length".
 	// So pass "vertices" and "vertices_length" to your function.
 	// To access ith vertex use: vertices[i].x, vertices[i].y and vertices[i].z
-	
+
 	STOP_RECORD_TIMER(cpu_time_ms);
 
 	return cpu_time_ms;
@@ -84,18 +84,18 @@ float time_profile_gpu(int depth, float radius, int thread_num, int block_num){
 int main(int argc, char **argv) {
 	if(check_args(argc, argv))
 		return 1;
-	
+
 	int depth = atoi(argv[1]);
 	int thread_num = atoi(argv[2]);
 	int block_num = atoi(argv[3]);
 	cout << "\nThread per block:"<< thread_num << endl;
 	cout << "Number of blocks:"<< block_num << "\n" << endl;
-	
+
 	float cpu_time = time_profile_cpu(depth, 1);
-	
+
 	export_csv("utilities/vertices.csv", "utilities/edges.csv", "utilities/vertices_sph.csv");
 	cout << "\n\nTime taken by the CPU is: " << cpu_time << " milliseconds\n\n" << endl;
-	
+
 
 	free_cpu_memory();
     return 1;
