@@ -16,10 +16,10 @@ y = vertices.y;
 z = vertices.z;
 %%
 % histogram of lats
-figure(1);  
-histogram(vertices_sph.theta, ceil(2*pi/1e-6));
-figure(2);
-plot(vertices_sph.theta);
+% figure(1);  
+% histogram(vertices_sph.theta, ceil(2*pi/1e-6));
+% figure(2);
+% plot(vertices_sph.theta);
 %%
 % plotting vertices
 figure(3);
@@ -34,5 +34,5 @@ for i = 1:height(edges)
     x_tmp = [edges.x1(i), edges.x2(i)];
     y_tmp = [edges.y1(i), edges.y2(i)];
     z_tmp = [edges.z1(i), edges.z2(i)];
-    plot3(x_tmp, y_tmp, z_tmp, 'b');
+    plot3(x_tmp, y_tmp, z_tmp);
 end
