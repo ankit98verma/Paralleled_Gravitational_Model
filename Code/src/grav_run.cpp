@@ -56,23 +56,34 @@ int check_args(int argc, char **argv){
 float time_profile_cpu(int depth, float radius){
 	init_vars(depth, radius);
 	init_icosphere();
-	float cpu_time_ms = -1;
+	float cpu_time_ms = 0;
+	float cpu_time_icosphere_ms = -1;
+	float cpu_time_fill_vertices_ms = -1;
+	float cpu_time_sort_ms = -1;
+	float cpu_time_grav_pot_ms = -1;
 
 	START_TIMER();
-
-	create_icoshpere();
-	fill_vertices();
-	quickSort_points(0, vertices_length-1);
-	fill_common_theta();
-    get_grav_pot();
-	// Garima TODO: Call Gravitational potential calculating function here
-	// the "vertex * vertices" is an array of vertices a which you have to
-	// get the gravitational potential. The length of this array is given
-	// by "vertices_length".
-	// So pass "vertices" and "vertices_length" to your function.
-	// To access ith vertex use: vertices[i].x, vertices[i].y and vertices[i].z
-
-	STOP_RECORD_TIMER(cpu_time_ms);
+		create_icoshpere();
+	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
+	
+	START_TIMER();
+		fill_vertices();
+	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
+	
+	START_TIMER();
+		quickSort_facevertices()
+		quickSort_points(0, vertices_length-1);
+	STOP_RECORD_TIMER(cpu_time_sort_ms);
+    
+    START_TIMER();
+    	fill_common_theta();
+    	get_grav_pot();
+    STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
+    cpu_time_ms += cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_sort_ms + cpu_time_grav_pot_ms;
+    printf("Icosphere generation time: %f ms\n", cpu_time_icosphere_ms);
+    printf("Fill vertices time: %f ms\n", cpu_time_fill_vertices_ms);
+	printf("Sorting time: %f ms\n", cpu_time_sort_ms);
+	printf("Gravitational potential time: %f ms\n", cpu_time_grav_pot_ms);
 
 	return cpu_time_ms;
 }
