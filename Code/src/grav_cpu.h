@@ -45,7 +45,7 @@ struct triangle
 typedef struct triangle triangle;
 
 // faces of the icosphere
-GLOBAL int * faces;
+GLOBAL triangle * faces;
 GLOBAL int faces_length;
 
 // vertices of the icosphere

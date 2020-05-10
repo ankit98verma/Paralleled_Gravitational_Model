@@ -45,23 +45,19 @@ void init_vars(int depth, int r){
 	faces_length = 20*pow(4, depth);
 	vertices_length = faces_length/2 + 2;
 	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
-	
 	vertices_sph = (point_sph *)malloc(vertices_length*sizeof(point_sph));
-	
 	common_thetas_count = (int *)malloc(vertices_length*sizeof(int));
 	common_thetas_length = 0;
-	
+	potential = (float*) malloc(vertices_length*sizeof(float));
+
 	curr_faces_count = 0;
-	faces = (int *)malloc(3*faces_length*sizeof(int));
+	faces = (triangle *)malloc(faces_length*sizeof(triangle));
 
 	cout << "\nDepth: " << depth << endl;
 	cout << "Faces: " << faces_length << endl;
 	// cout << "Size of faces array: " << faces_length*sizeof(triangle)/4 << " words" << endl;
 	cout << "Number of vertices: "<< vertices_length << "\n" << endl;
 	// cout << "Size of vertices array: " << vertices_length*sizeof(vertices)/4 << " words" << endl;
-	faces_length = 3*faces_length;
-
-	potential = (float*) malloc(vertices_length*sizeof(float));
 }
 
 void init_icosphere(){
@@ -72,11 +68,8 @@ void init_icosphere(){
 	float hAng1 = PI/2;
 	float hAng2 = PI/2 + H_ANG/2;
 
-	vertices[0].x = 0;
-	vertices[0].y = 0;
-	vertices[0].z = radius;
 	int c = 0;
-	for(int i=1; i<=10; i+=2){
+	for(int i=0; i<5; i++){
 		float x1 = xy*cosf(hAng1);
 		float x2 = xy*cosf(hAng2);
 
@@ -86,88 +79,106 @@ void init_icosphere(){
 		hAng1 += H_ANG;
 		hAng2 += H_ANG;
 
-		vertices[i].x = x1;
-		vertices[i].y = y1;
-		vertices[i].z = z;
+		float x3 = xy*cosf(hAng1);
+		float x4 = xy*cosf(hAng2);
 
-		vertices[i+1].x = x2;
-		vertices[i+1].y = y2;
-		vertices[i+1].z = -z;
+		float y3 = xy*sinf(hAng1);
+		float y4 = xy*sinf(hAng2);
 
-		faces[c] = 0;
-		faces[c+1] = i;
-		faces[c+2] = (i+2)%10;
-		c+=3;
-		
-		faces[c] = 11;
-		faces[c+1] = i+1;
-		if(i+3 > 10)
-			faces[c+2] = (i+3)%10;
-		else
-			faces[c+2] = (i+3);
-		c+=3;
+		faces[c].v0.x = 0;
+		faces[c].v0.y = 0;
+		faces[c].v0.z = radius;
 
-		faces[c] = i;
-		faces[c+1] = i+1;
-		faces[c+2] = (i+2)%10;
-		c+=3;
+		faces[c].v1.x = x1;
+		faces[c].v1.y = y1;
+		faces[c].v1.z = z;
 
-		faces[c] = i+1;
-		faces[c+1] = (i+2)%10;
-		if(i+3 > 10)
-			faces[c+2] = (i+3)%10;
-		else
-			faces[c+2] = (i+3);
-		c+=3;
+		faces[c].v2.x = x3;
+		faces[c].v2.y = y3;
+		faces[c].v2.z = z;
+		c++;
+
+		faces[c].v0.x = 0;
+		faces[c].v0.y = 0;
+		faces[c].v0.z = -radius;
+
+		faces[c].v1.x = x2;
+		faces[c].v1.y = y2;
+		faces[c].v1.z = -z;
+
+		faces[c].v2.x = x4;
+		faces[c].v2.y = y4;
+		faces[c].v2.z = -z;
+		c++;
+
+		faces[c].v0.x = x1;
+		faces[c].v0.y = y1;
+		faces[c].v0.z = z;
+
+		faces[c].v1.x = x2;
+		faces[c].v1.y = y2;
+		faces[c].v1.z = -z;
+
+		faces[c].v2.x = x3;
+		faces[c].v2.y = y3;
+		faces[c].v2.z = z;
+		c++;
+
+		faces[c].v0.x = x2;
+		faces[c].v0.y = y2;
+		faces[c].v0.z = -z;
+
+		faces[c].v1.x = x3;
+		faces[c].v1.y = y3;
+		faces[c].v1.z = z;
+
+		faces[c].v2.x = x4;
+		faces[c].v2.y = y4;
+		faces[c].v2.z = -z;
+		c++;
 	}
 	curr_faces_count = c;
-	vertices[11].x = 0;
-	vertices[11].y = 0;
-	vertices[11].z = -radius;
 }
 
-void get_midpoints(vertex * tmp, vertex * tri){
+void get_midpoints(triangle tmp, triangle * tri){
 	float x_tmp, y_tmp, z_tmp, scale;
 
-	x_tmp = (tmp[0].x + tmp[1].x)/2;
-	y_tmp = (tmp[0].y + tmp[1].y)/2;
-	z_tmp = (tmp[0].z + tmp[1].z)/2;
+	x_tmp = (tmp.v0.x + tmp.v1.x)/2;
+	y_tmp = (tmp.v0.y + tmp.v1.y)/2;
+	z_tmp = (tmp.v0.z + tmp.v1.z)/2;
 	scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
-	tri[0].x = x_tmp*scale;
-	tri[0].y = y_tmp*scale;
-	tri[0].z = z_tmp*scale;
+	tri->v0.x = x_tmp*scale;
+	tri->v0.y = y_tmp*scale;
+	tri->v0.z = z_tmp*scale;
 
-	x_tmp = (tmp[1].x + tmp[2].x)/2;
-	y_tmp = (tmp[1].y + tmp[2].y)/2;
-	z_tmp = (tmp[1].z + tmp[2].z)/2;
+	x_tmp = (tmp.v1.x + tmp.v2.x)/2;
+	y_tmp = (tmp.v1.y + tmp.v2.y)/2;
+	z_tmp = (tmp.v1.z + tmp.v2.z)/2;
 	scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
-	tri[1].x = x_tmp*scale;
-	tri[1].y = y_tmp*scale;
-	tri[1].z = z_tmp*scale;
+	tri->v1.x = x_tmp*scale;
+	tri->v1.y = y_tmp*scale;
+	tri->v1.z = z_tmp*scale;
 
-	x_tmp = (tmp[2].x + tmp[0].x)/2;
-	y_tmp = (tmp[2].y + tmp[0].y)/2;
-	z_tmp = (tmp[2].z + tmp[0].z)/2;
+	x_tmp = (tmp.v2.x + tmp.v0.x)/2;
+	y_tmp = (tmp.v2.y + tmp.v0.y)/2;
+	z_tmp = (tmp.v2.z + tmp.v0.z)/2;
 	scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
-	tri[2].x = x_tmp*scale;
-	tri[2].y = y_tmp*scale;
-	tri[2].z = z_tmp*scale;
+	tri->v2.x = x_tmp*scale;
+	tri->v2.y = y_tmp*scale;
+	tri->v2.z = z_tmp*scale;
 }
 
 void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 
-	vertices triag_tmp[3];
+	triangle triag_tmp;
 	//Todo: generate icosphere of depth
 	for(int j=1; j<=max_depth; j++){
 		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
 		int a = curr_faces_count;
 		// go through every edge and divide the edge into half
-		for(int i=0; i<a; i+=3){
-			vertices tri_i[3];
-			tri_i[0] = vertices[faces[i]];
-			tri_i[1] = vertices[faces[1]];
-			tri_i[2] = vertices[faces[2]];
+		for(int i=0; i<a; i++){
+			triangle tri_i = faces[i];
 			/* compute 3 new vertices by splitting half on each edge
 	        *         P0
 	        *        / \
@@ -179,58 +190,58 @@ void create_icoshpere(){
 			get_midpoints(tri_i, &triag_tmp);
 
 			//adding triangle P0, V[0], V[2]
-			// faces[i].v1.x = triag_tmp.v0.x;
-			// faces[i].v1.y = triag_tmp.v0.y;
-			// faces[i].v1.z = triag_tmp.v0.z;
+			faces[i].v1.x = triag_tmp.v0.x;
+			faces[i].v1.y = triag_tmp.v0.y;
+			faces[i].v1.z = triag_tmp.v0.z;
 
-			// faces[i].v2.x = triag_tmp.v2.x;
-			// faces[i].v2.y = triag_tmp.v2.y;
-			// faces[i].v2.z = triag_tmp.v2.z;
+			faces[i].v2.x = triag_tmp.v2.x;
+			faces[i].v2.y = triag_tmp.v2.y;
+			faces[i].v2.z = triag_tmp.v2.z;
 
-			// //adding triangle P1, V[0], V[1]
-			// faces[curr_faces_count].v0.x = triag_tmp.v0.x;
-			// faces[curr_faces_count].v0.y = triag_tmp.v0.y;
-			// faces[curr_faces_count].v0.z = triag_tmp.v0.z;
+			//adding triangle P1, V[0], V[1]
+			faces[curr_faces_count].v0.x = triag_tmp.v0.x;
+			faces[curr_faces_count].v0.y = triag_tmp.v0.y;
+			faces[curr_faces_count].v0.z = triag_tmp.v0.z;
 
-			// faces[curr_faces_count].v1.x = tri_i.v1.x;
-			// faces[curr_faces_count].v1.y = tri_i.v1.y;
-			// faces[curr_faces_count].v1.z = tri_i.v1.z;
+			faces[curr_faces_count].v1.x = tri_i.v1.x;
+			faces[curr_faces_count].v1.y = tri_i.v1.y;
+			faces[curr_faces_count].v1.z = tri_i.v1.z;
 
-			// faces[curr_faces_count].v2.x = triag_tmp.v1.x;
-			// faces[curr_faces_count].v2.y = triag_tmp.v1.y;
-			// faces[curr_faces_count].v2.z = triag_tmp.v1.z;
-			// curr_faces_count++;
+			faces[curr_faces_count].v2.x = triag_tmp.v1.x;
+			faces[curr_faces_count].v2.y = triag_tmp.v1.y;
+			faces[curr_faces_count].v2.z = triag_tmp.v1.z;
+			curr_faces_count++;
 
-			// //adding triangle P2, V[1], V[2]
-			// faces[curr_faces_count].v0.x = triag_tmp.v1.x;
-			// faces[curr_faces_count].v0.y = triag_tmp.v1.y;
-			// faces[curr_faces_count].v0.z = triag_tmp.v1.z;
+			//adding triangle P2, V[1], V[2]
+			faces[curr_faces_count].v0.x = triag_tmp.v1.x;
+			faces[curr_faces_count].v0.y = triag_tmp.v1.y;
+			faces[curr_faces_count].v0.z = triag_tmp.v1.z;
 
-			// faces[curr_faces_count].v1.x = tri_i.v2.x;
-			// faces[curr_faces_count].v1.y = tri_i.v2.y;
-			// faces[curr_faces_count].v1.z = tri_i.v2.z;
+			faces[curr_faces_count].v1.x = tri_i.v2.x;
+			faces[curr_faces_count].v1.y = tri_i.v2.y;
+			faces[curr_faces_count].v1.z = tri_i.v2.z;
 
-			// faces[curr_faces_count].v2.x = triag_tmp.v2.x;
-			// faces[curr_faces_count].v2.y = triag_tmp.v2.y;
-			// faces[curr_faces_count].v2.z = triag_tmp.v2.z;
-			// curr_faces_count++;
+			faces[curr_faces_count].v2.x = triag_tmp.v2.x;
+			faces[curr_faces_count].v2.y = triag_tmp.v2.y;
+			faces[curr_faces_count].v2.z = triag_tmp.v2.z;
+			curr_faces_count++;
 
-			// //adding triangle V[0], V[1], V[2]
-			// faces[curr_faces_count].v0.x = triag_tmp.v0.x;
-			// faces[curr_faces_count].v0.y = triag_tmp.v0.y;
-			// faces[curr_faces_count].v0.z = triag_tmp.v0.z;
+			//adding triangle V[0], V[1], V[2]
+			faces[curr_faces_count].v0.x = triag_tmp.v0.x;
+			faces[curr_faces_count].v0.y = triag_tmp.v0.y;
+			faces[curr_faces_count].v0.z = triag_tmp.v0.z;
 
-			// faces[curr_faces_count].v1.x = triag_tmp.v1.x;
-			// faces[curr_faces_count].v1.y = triag_tmp.v1.y;
-			// faces[curr_faces_count].v1.z = triag_tmp.v1.z;
+			faces[curr_faces_count].v1.x = triag_tmp.v1.x;
+			faces[curr_faces_count].v1.y = triag_tmp.v1.y;
+			faces[curr_faces_count].v1.z = triag_tmp.v1.z;
 
-			// faces[curr_faces_count].v2.x = triag_tmp.v2.x;
-			// faces[curr_faces_count].v2.y = triag_tmp.v2.y;
-			// faces[curr_faces_count].v2.z = triag_tmp.v2.z;
-			// curr_faces_count++;
+			faces[curr_faces_count].v2.x = triag_tmp.v2.x;
+			faces[curr_faces_count].v2.y = triag_tmp.v2.y;
+			faces[curr_faces_count].v2.z = triag_tmp.v2.z;
+			curr_faces_count++;
 		}
 	}
-	cout << "Final curr face count: "<< curr_faces_count<< endl;
+	// cout << "Final curr face count: "<< curr_faces_count<< endl;
 }
 
 void export_csv(string filename1, string filename2, string filename3){
@@ -244,7 +255,7 @@ void export_csv(string filename1, string filename2, string filename3){
 	obj_stream3 << "r, theta, phi" << endl;
 	for(int i=0; i< vertices_length; i++){
 		obj_stream << vertices[i].x << ", " << vertices[i].y << ", " << vertices[i].z << endl;
-		// obj_stream3 << 	vertices_sph[i].r << ", " << vertices_sph[i].theta << ", " << vertices_sph[i].phi << endl;
+		obj_stream3 << 	vertices_sph[i].r << ", " << vertices_sph[i].theta << ", " << vertices_sph[i].phi << endl;
 	}
 	obj_stream.close();
 	obj_stream3.close();
@@ -252,16 +263,14 @@ void export_csv(string filename1, string filename2, string filename3){
 	ofstream obj_stream2;
 	obj_stream2.open(filename2);
 	obj_stream2 << "x1, y1, z1, x2, y2, z2" << endl;
-	for(int i=0; i< curr_faces_count; i+=3){
-		vertex v1 = vertices[faces[i]];
-		vertex v2 = vertices[faces[i+1]];
-		vertex v3 = vertices[faces[i+2]];
-		obj_stream2 << 	v1.x << ", " << v1.y << ", " << v1.z << ", " <<
-						v2.x << ", " << v2.y << ", " << v2.z << endl;
-		obj_stream2 << 	v1.x << ", " << v1.y << ", " << v1.z << ", " <<
-						v3.x << ", " << v3.y << ", " << v3.z << endl;
-		obj_stream2 << 	v3.x << ", " << v3.y << ", " << v3.z << ", " <<
-						v2.x << ", " << v2.y << ", " << v2.z << endl;
+	for(int i=0; i< curr_faces_count; i++){
+		triangle triangle_tmp = faces[i];
+		obj_stream2 << 	triangle_tmp.v0.x << ", " << triangle_tmp.v0.y << ", " << triangle_tmp.v0.z << ", " <<
+						triangle_tmp.v1.x << ", " << triangle_tmp.v1.y << ", " << triangle_tmp.v1.z << endl;
+		obj_stream2 << 	triangle_tmp.v0.x << ", " << triangle_tmp.v0.y << ", " << triangle_tmp.v0.z << ", " <<
+						triangle_tmp.v2.x << ", " << triangle_tmp.v2.y << ", " << triangle_tmp.v2.z << endl;
+		obj_stream2 << 	triangle_tmp.v1.x << ", " << triangle_tmp.v1.y << ", " << triangle_tmp.v1.z << ", " <<
+						triangle_tmp.v2.x << ", " << triangle_tmp.v2.y << ", " << triangle_tmp.v2.z << endl;
 	}
 	obj_stream2.close();
 }

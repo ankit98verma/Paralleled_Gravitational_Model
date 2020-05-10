@@ -63,21 +63,20 @@ float time_profile_cpu(int depth, float radius){
 	float cpu_time_grav_pot_ms = -1;
 
 	START_TIMER();
-		// create_icoshpere();
+		create_icoshpere();
 	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
 	
 	START_TIMER();
-		// fill_vertices();
+		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
 	
 	START_TIMER();
-		// quickSort_facevertices()
-		// quickSort_points(0, vertices_length-1);
+		quickSort_points(0, vertices_length-1);
 	STOP_RECORD_TIMER(cpu_time_sort_ms);
     
     START_TIMER();
-    	// fill_common_theta();
-    	// get_grav_pot();
+    	fill_common_theta();
+    	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
     cpu_time_ms += cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_sort_ms + cpu_time_grav_pot_ms;
     printf("Icosphere generation time: %f ms\n", cpu_time_icosphere_ms);
