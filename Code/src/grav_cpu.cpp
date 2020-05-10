@@ -34,6 +34,10 @@ float const H_ANG = PI/180*72;
 float const ELE_ANG = atanf(1.0f / 2);
 int curr_faces_count;
 
+triangle * faces_copy;
+
+void quickSort_faces(int low, int high);
+
 void init_vars(int depth, int r){
 
 	epsilon = 1e-6;
@@ -52,6 +56,7 @@ void init_vars(int depth, int r){
 
 	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
+	faces_copy = (triangle *)malloc(faces_length*sizeof(triangle));
 
 	cout << "\nDepth: " << depth << endl;
 	cout << "Faces: " << faces_length << endl;
@@ -241,6 +246,7 @@ void create_icoshpere(){
 			curr_faces_count++;
 		}
 	}
+	memcpy(faces_copy, faces, faces_length*sizeof(triangle));
 	// cout << "Final curr face count: "<< curr_faces_count<< endl;
 }
 
@@ -276,28 +282,46 @@ void export_csv(string filename1, string filename2, string filename3){
 }
 
 void fill_vertices(){
-	int c = 0, is_add;
+	quickSort_faces(0, 3*faces_length-1);
+
+	int is_add=1;
 	vertex * all_vs = (vertex *)faces;
-	for(int i=0; i<3*faces_length; i++){
-		is_add = 1;
-		for(int j=0; j<c; j++){
-			float t = 	fabs(all_vs[i].x - vertices[j].x) + fabs(all_vs[i].y - vertices[j].y) +
-						fabs(all_vs[i].z - vertices[j].z);
-			if(t <= 3*epsilon){
-				is_add = 0;
-				break;
+	vertices[0].x = all_vs[0].x;
+	vertices[0].y = all_vs[0].y;
+	vertices[0].z = all_vs[0].z;
+	int c_start = 0, c_end = 1;
+
+	vertices_sph[c_end].r = 1;
+	vertices_sph[c_end].theta = atan2f(vertices[c_end].z, sqrtf(vertices[c_end].x*vertices[c_end].x + vertices[c_end].y*vertices[c_end].y));
+	vertices_sph[c_end].phi = atan2f(vertices[c_end].y, vertices[c_end].x);
+	for(int i=1; i<3*faces_length; i++){
+		float sum_i = all_vs[i].x+all_vs[i].y+all_vs[i].z;
+		float sum_i_1 = all_vs[i-1].x+all_vs[i-1].y+all_vs[i-1].z;
+		if((sum_i - sum_i_1) <= epsilon){
+			is_add = 1;
+			for(int j=c_start; j<c_end; j++){
+				float t = 	fabs(vertices[j].x - all_vs[i].x) + fabs(vertices[j].y - all_vs[i].y) +
+						fabs(vertices[j].z - vertices[j].z);
+				if(t <= epsilon){
+					is_add = 0;
+					break;
+				}
 			}
+		}else{
+			is_add = 1;
+			c_start = c_end;
 		}
 		if(is_add){
-			vertices[c].x = all_vs[i].x;
-			vertices[c].y = all_vs[i].y;
-			vertices[c].z = all_vs[i].z;
-			vertices_sph[c].r = 1;
-			vertices_sph[c].theta = atan2f(vertices[c].z, sqrtf(vertices[c].x*vertices[c].x + vertices[c].y*vertices[c].y));
-			vertices_sph[c].phi = atan2f(vertices[c].y, vertices[c].x);
-			c++;
+			vertices[c_end].x = all_vs[i].x;
+			vertices[c_end].y = all_vs[i].y;
+			vertices[c_end].z = all_vs[i].z;
+			vertices_sph[c_end].r = 1;
+			vertices_sph[c_end].theta = atan2f(vertices[c_end].z, sqrtf(vertices[c_end].x*vertices[c_end].x + vertices[c_end].y*vertices[c_end].y));
+			vertices_sph[c_end].phi = atan2f(vertices[c_end].y, vertices[c_end].x);
+			c_end++;
 		}
 	}
+	memcpy(faces, faces_copy, faces_length*sizeof(triangle));
 }
 
 int partition(point_sph * arr, int low, int high)  {
@@ -332,6 +356,44 @@ void quickSort_points(int low, int high)
 	    // partition and after partition
 	    quickSort_points(low, pi - 1);
 	    quickSort_points(pi + 1, high);
+	}
+
+}
+
+int partition(vertex * arr, int low, int high)  {
+
+    vertex pivot = arr[high]; // pivot
+    int i = (low - 1); // Index of smaller element
+  	vertex tmp;
+    for (int j = low; j <= high - 1; j++)
+    {
+        // If current element is smaller than the pivot
+        float sum_j = arr[j].x+ arr[j].y + arr[j].z;
+        float sum_p = pivot.x+ pivot.y + pivot.z;
+        if (sum_j < sum_p)
+        {
+            i++; // increment index of smaller element
+            tmp = arr[i];
+            arr[i] = arr[j];
+            arr[j] = tmp;
+        }
+    }
+    tmp = arr[high];
+    arr[high] = arr[i+1];
+    arr[i+1] = tmp;
+    return (i + 1);
+}
+void quickSort_faces(int low, int high)
+{
+	if(low < high){
+		/* pi is partitioning index, arr[p] is now
+	    at right place */
+	    int pi = partition((vertex *)faces, low, high);
+
+	    // Separately sort elements before
+	    // partition and after partition
+	    quickSort_faces(low, pi - 1);
+	    quickSort_faces(pi + 1, high);
 	}
 
 }
