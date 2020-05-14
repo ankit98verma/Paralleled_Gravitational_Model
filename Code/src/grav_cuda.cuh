@@ -8,12 +8,22 @@
 #ifndef _GRAV_CUDA_CUH_
 #define _GRAV_CUDA_CUH_
 
-typedef unsigned int uint;
+
 #include "cuda_header.cuh"
+#include "grav_cpu.h"
 
-// CUDA_CALLABLE void template1(...);
+#undef  GLOBAL
+#ifdef _GRAV_CUDA_C_
+#define GLOBAL
+#else
+#define GLOBAL  extern
+#endif
 
-// float template2(...);
+GLOBAL triangle * dev_faces;
+GLOBAL triangle * gpu_out_faces;
 
-float cuda_call_kernel();
+void cuda_cpy_input_data();
+void cuda_cpy_output_data();
+void cuda_call_kernel();
+
 #endif

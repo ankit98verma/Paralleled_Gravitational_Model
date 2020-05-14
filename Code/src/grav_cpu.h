@@ -20,32 +20,34 @@ using std::string;
 #define GLOBAL  extern
 #endif
 
+#define ICOSPHERE_INIT_FACE_LEN		20
+
 struct vertex
 {
-	float x;
-	float y;
-	float z;
+    float x;
+    float y;
+    float z;
 };
 typedef struct vertex vertex;
 
 struct point_sph
 {
-	float r;
-	float theta;
-	float phi;
+    float r;
+    float theta;
+    float phi;
 };
 typedef struct point_sph point_sph;
 
 struct triangle
 {
-	vertex v[3];
-	// vertex v1;
-	// vertex v2;
+    vertex v[3];
 };
 typedef struct triangle triangle;
 
+
 // faces of the icosphere
 GLOBAL triangle * faces;
+GLOBAL triangle faces_init[ICOSPHERE_INIT_FACE_LEN];
 GLOBAL unsigned int faces_length;
 
 // vertices of the icosphere
@@ -67,6 +69,7 @@ GLOBAL float radius;
 GLOBAL float epsilon;
 
 void init_vars(unsigned int depth, float r);
+void allocate_cpu_mem();
 void init_icosphere();
 
 void create_icoshpere();
@@ -74,7 +77,7 @@ void fill_vertices();
 void quickSort_points(int low, int high);
 void fill_common_theta();
 
-void export_csv(string filename1, string filename2, string filename3);
+void export_csv(triangle * f, string filename1, string filename2, string filename3);
 
 //void get_grav_pot(vertex * vertices, int vertices_length);
 void get_grav_pot();

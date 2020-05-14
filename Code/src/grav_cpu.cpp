@@ -39,14 +39,13 @@ triangle * faces_copy;
 void quickSort_faces(int low, int high);
 
 void init_vars(unsigned int depth, float r){
-
 	epsilon = 1e-6;
-
-	// Todo: allcate the memory for variables
 	max_depth = depth;
 	radius = r;
+}
 
-	faces_length = 20*pow(4, depth);
+void allocate_cpu_mem(){
+	faces_length = 20*pow(4, max_depth);
 	vertices_length = faces_length/2 + 2;
 	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
 	vertices_sph = (point_sph *)malloc(vertices_length*sizeof(point_sph));
@@ -58,7 +57,7 @@ void init_vars(unsigned int depth, float r){
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
 	faces_copy = (triangle *)malloc(faces_length*sizeof(triangle));
 
-	cout << "\nDepth: " << depth << endl;
+	cout << "\nDepth: " << max_depth << endl;
 	cout << "Faces: " << faces_length << endl;
 	cout << "Number of vertices: "<< vertices_length << "\n" << endl;
 }
@@ -88,56 +87,56 @@ void init_icosphere(){
 		float y3 = xy*sinf(hAng1);
 		float y4 = xy*sinf(hAng2);
 
-		faces[c].v[0].x = 0;
-		faces[c].v[0].y = 0;
-		faces[c].v[0].z = radius;
+		faces_init[c].v[0].x = 0;
+		faces_init[c].v[0].y = 0;
+		faces_init[c].v[0].z = radius;
 
-		faces[c].v[1].x = x1;
-		faces[c].v[1].y = y1;
-		faces[c].v[1].z = z;
+		faces_init[c].v[1].x = x1;
+		faces_init[c].v[1].y = y1;
+		faces_init[c].v[1].z = z;
 
-		faces[c].v[2].x = x3;
-		faces[c].v[2].y = y3;
-		faces[c].v[2].z = z;
+		faces_init[c].v[2].x = x3;
+		faces_init[c].v[2].y = y3;
+		faces_init[c].v[2].z = z;
 		c++;
 
-		faces[c].v[0].x = 0;
-		faces[c].v[0].y = 0;
-		faces[c].v[0].z = -radius;
+		faces_init[c].v[0].x = 0;
+		faces_init[c].v[0].y = 0;
+		faces_init[c].v[0].z = -radius;
 
-		faces[c].v[1].x = x2;
-		faces[c].v[1].y = y2;
-		faces[c].v[1].z = -z;
+		faces_init[c].v[1].x = x2;
+		faces_init[c].v[1].y = y2;
+		faces_init[c].v[1].z = -z;
 
-		faces[c].v[2].x = x4;
-		faces[c].v[2].y = y4;
-		faces[c].v[2].z = -z;
+		faces_init[c].v[2].x = x4;
+		faces_init[c].v[2].y = y4;
+		faces_init[c].v[2].z = -z;
 		c++;
 
-		faces[c].v[0].x = x1;
-		faces[c].v[0].y = y1;
-		faces[c].v[0].z = z;
+		faces_init[c].v[0].x = x1;
+		faces_init[c].v[0].y = y1;
+		faces_init[c].v[0].z = z;
 
-		faces[c].v[1].x = x2;
-		faces[c].v[1].y = y2;
-		faces[c].v[1].z = -z;
+		faces_init[c].v[1].x = x2;
+		faces_init[c].v[1].y = y2;
+		faces_init[c].v[1].z = -z;
 
-		faces[c].v[2].x = x3;
-		faces[c].v[2].y = y3;
-		faces[c].v[2].z = z;
+		faces_init[c].v[2].x = x3;
+		faces_init[c].v[2].y = y3;
+		faces_init[c].v[2].z = z;
 		c++;
 
-		faces[c].v[0].x = x2;
-		faces[c].v[0].y = y2;
-		faces[c].v[0].z = -z;
+		faces_init[c].v[0].x = x2;
+		faces_init[c].v[0].y = y2;
+		faces_init[c].v[0].z = -z;
 
-		faces[c].v[1].x = x3;
-		faces[c].v[1].y = y3;
-		faces[c].v[1].z = z;
+		faces_init[c].v[1].x = x3;
+		faces_init[c].v[1].y = y3;
+		faces_init[c].v[1].z = z;
 
-		faces[c].v[2].x = x4;
-		faces[c].v[2].y = y4;
-		faces[c].v[2].z = -z;
+		faces_init[c].v[2].x = x4;
+		faces_init[c].v[2].y = y4;
+		faces_init[c].v[2].z = -z;
 		c++;
 	}
 	curr_faces_count = c;
@@ -145,41 +144,26 @@ void init_icosphere(){
 
 void get_midpoints(triangle tmp, triangle * tri){
 	float x_tmp, y_tmp, z_tmp, scale;
-
-	x_tmp = (tmp.v[0].x + tmp.v[1].x)/2;
-	y_tmp = (tmp.v[0].y + tmp.v[1].y)/2;
-	z_tmp = (tmp.v[0].z + tmp.v[1].z)/2;
-	scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
-	tri->v[0].x = x_tmp*scale;
-	tri->v[0].y = y_tmp*scale;
-	tri->v[0].z = z_tmp*scale;
-
-	x_tmp = (tmp.v[1].x + tmp.v[2].x)/2;
-	y_tmp = (tmp.v[1].y + tmp.v[2].y)/2;
-	z_tmp = (tmp.v[1].z + tmp.v[2].z)/2;
-	scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
-	tri->v[1].x = x_tmp*scale;
-	tri->v[1].y = y_tmp*scale;
-	tri->v[1].z = z_tmp*scale;
-
-	x_tmp = (tmp.v[2].x + tmp.v[0].x)/2;
-	y_tmp = (tmp.v[2].y + tmp.v[0].y)/2;
-	z_tmp = (tmp.v[2].z + tmp.v[0].z)/2;
-	scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
-	tri->v[2].x = x_tmp*scale;
-	tri->v[2].y = y_tmp*scale;
-	tri->v[2].z = z_tmp*scale;
+	for(int i=0; i<3;i++){
+		x_tmp = (tmp.v[i].x + tmp.v[(i+1)%3].x)/2;
+		y_tmp = (tmp.v[i].y + tmp.v[(i+1)%3].y)/2;
+		z_tmp = (tmp.v[i].z + tmp.v[(i+1)%3].z)/2;
+		scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
+		tri->v[i].x = x_tmp*scale;
+		tri->v[i].y = y_tmp*scale;
+		tri->v[i].z = z_tmp*scale;
+	}
 }
 
 void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
-
+	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
 	triangle triag_tmp;
 	//Todo: generate icosphere of depth
 	for(unsigned int j=1; j<=max_depth; j++){
 		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
 		unsigned int a = curr_faces_count;
-		// go through every edge and divide the edge into half
+		// go through every face and divide the face into four equal parts
 		for(unsigned int i=0; i<a; i++){
 			triangle tri_i = faces[i];
 			/* compute 3 new vertices by splitting half on each edge
@@ -248,7 +232,7 @@ void create_icoshpere(){
 	// cout << "Final curr face count: "<< curr_faces_count<< endl;
 }
 
-void export_csv(string filename1, string filename2, string filename3){
+void export_csv(triangle * f, string filename1, string filename2, string filename3){
 	cout << "Exporting: " << filename1 << ", " << filename2 <<endl;
 
 	ofstream obj_stream;
@@ -268,13 +252,10 @@ void export_csv(string filename1, string filename2, string filename3){
 	obj_stream2.open(filename2);
 	obj_stream2 << "x1, y1, z1, x2, y2, z2" << endl;
 	for(unsigned int i=0; i< curr_faces_count; i++){
-		triangle triangle_tmp = faces[i];
-		obj_stream2 << 	triangle_tmp.v[0].x << ", " << triangle_tmp.v[0].y << ", " << triangle_tmp.v[0].z << ", " <<
-						triangle_tmp.v[1].x << ", " << triangle_tmp.v[1].y << ", " << triangle_tmp.v[1].z << endl;
-		obj_stream2 << 	triangle_tmp.v[0].x << ", " << triangle_tmp.v[0].y << ", " << triangle_tmp.v[0].z << ", " <<
-						triangle_tmp.v[2].x << ", " << triangle_tmp.v[2].y << ", " << triangle_tmp.v[2].z << endl;
-		obj_stream2 << 	triangle_tmp.v[1].x << ", " << triangle_tmp.v[1].y << ", " << triangle_tmp.v[1].z << ", " <<
-						triangle_tmp.v[2].x << ", " << triangle_tmp.v[2].y << ", " << triangle_tmp.v[2].z << endl;
+		triangle triangle_tmp = f[i];
+		for(int j=0; j<3;j++)
+			obj_stream2 << 	triangle_tmp.v[j].x << ", " << triangle_tmp.v[j].y << ", " << triangle_tmp.v[j].z << ", " <<
+							triangle_tmp.v[(j+1)%3].x << ", " << triangle_tmp.v[(j+1)%3].y << ", " << triangle_tmp.v[(j+1)%3].z << endl;
 	}
 	obj_stream2.close();
 }

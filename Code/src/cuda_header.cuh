@@ -6,6 +6,8 @@
 #ifndef CUDA_HEADER_CUH_
 #define CUDA_HEADER_CUH_
 
+
+
 #ifdef __CUDA_ARCH__
 
 // Device function attributes
