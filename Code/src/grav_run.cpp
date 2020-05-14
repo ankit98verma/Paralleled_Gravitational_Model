@@ -66,6 +66,13 @@ float time_profile_cpu(int depth, float radius){
 		create_icoshpere();
 	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
 	
+	// calculate the distance b/w two points of icosphere
+	float norm0 = faces[0].v[0].x*faces[0].v[0].x + faces[0].v[0].y*faces[0].v[0].y + faces[0].v[0].z*faces[0].v[0].z;
+	float norm1 = faces[0].v[1].x*faces[0].v[1].x + faces[0].v[1].y*faces[0].v[1].y + faces[0].v[1].z*faces[0].v[1].z;
+	float ang = acosf((faces[0].v[0].x*faces[0].v[1].x + faces[0].v[0].y*faces[0].v[1].y + faces[0].v[0].z*faces[0].v[1].z)/(norm1*norm0));
+	float dis = radius*ang;
+	cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
+	
 	START_TIMER();
 		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);

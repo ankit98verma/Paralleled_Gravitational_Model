@@ -38,35 +38,35 @@ typedef struct point_sph point_sph;
 
 struct triangle
 {
-	vertex v0;
-	vertex v1;
-	vertex v2;
+	vertex v[3];
+	// vertex v1;
+	// vertex v2;
 };
 typedef struct triangle triangle;
 
 // faces of the icosphere
 GLOBAL triangle * faces;
-GLOBAL int faces_length;
+GLOBAL unsigned int faces_length;
 
 // vertices of the icosphere
 GLOBAL vertex * vertices;
 GLOBAL point_sph * vertices_sph;
-GLOBAL int vertices_length;
+GLOBAL unsigned int vertices_length;
 GLOBAL float * potential;
 
 GLOBAL int * common_thetas_count;
 GLOBAL int * cummulative_common_theta_count;
-GLOBAL int common_thetas_length;
+GLOBAL unsigned int common_thetas_length;
 
 // The depth of the icosphere
-GLOBAL int max_depth;
+GLOBAL unsigned int max_depth;
 
 // Information of sphere
 GLOBAL float radius;
 
 GLOBAL float epsilon;
 
-void init_vars(int depth, int r);
+void init_vars(unsigned int depth, float r);
 void init_icosphere();
 
 void create_icoshpere();
