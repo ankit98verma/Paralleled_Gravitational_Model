@@ -89,7 +89,7 @@ float time_profile_cpu(){
 // this function should be called only after calling time_profile_cpu
 float time_profile_gpu(int thread_num){
 	float gpu_time_ms = 0;
-	float gpu_time_icosphere = -1;
+	float gpu_time_icosphere = -1, gpu_time_icosphere2 =-1;
 	float gpu_time_indata_cpy = -1;
 	float gpu_time_outdata_cpy = -1;
 	
@@ -98,16 +98,37 @@ float time_profile_gpu(int thread_num){
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 	
 	START_TIMER();
-		// cudacall_icosphere_naive(thread_num);
-		cudacall_icosphere(thread_num);
+		cudacall_icosphere_naive(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere);
+	cudaError err = cudaGetLastError();
+    if  (cudaSuccess != err){
+            cerr << "Error " << cudaGetErrorString(err) << endl;
+    } else {
+            cerr << "No kernel error detected" << endl;
+    }
+
+	free_gpu_memory();
+	START_TIMER();
+		cuda_cpy_input_data();
+	STOP_RECORD_TIMER(gpu_time_indata_cpy);
+
+	START_TIMER();
+		// cudacall_icosphere_sh_naive(thread_num);
+	STOP_RECORD_TIMER(gpu_time_icosphere2);
+	err = cudaGetLastError();
+    if  (cudaSuccess != err){
+            cerr << "Error " << cudaGetErrorString(err) << endl;
+    } else {
+            cerr << "No kernel error detected" << endl;
+    }
 
 	START_TIMER();
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 	
 	printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
-    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere);
+    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
+    printf("GPU Sh_Naive Icosphere generation time: %f ms\n", gpu_time_icosphere2);
 	printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
 	
 	gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy;
@@ -179,6 +200,7 @@ int main(int argc, char **argv) {
 	export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
 	export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
 	free_cpu_memory();
+	free_gpu_memory();
     return 1;
 }
 
