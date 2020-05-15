@@ -98,7 +98,8 @@ float time_profile_gpu(int thread_num){
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 	
 	START_TIMER();
-		cudacall_icosphere_naive(thread_num);
+		// cudacall_icosphere_naive(thread_num);
+		cudacall_icosphere(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere);
 
 	START_TIMER();

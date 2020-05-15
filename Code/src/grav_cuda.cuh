@@ -24,6 +24,7 @@ GLOBAL triangle * gpu_out_faces;
 
 void cuda_cpy_input_data();
 void cuda_cpy_output_data();
-void cudacall_icosphere_naive(int BW);
+void cudacall_icosphere(int);
+void cudacall_icosphere_naive(int);
 
 #endif
