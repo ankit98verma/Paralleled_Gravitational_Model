@@ -19,7 +19,6 @@ using std::cerr;
 using std::cout;
 using std::endl;
 
-#define BW	1024
 
 CUDA_CALLABLE
 void break_triangle(triangle face_tmp, vertex * v_tmp, float radius) {
@@ -35,21 +34,23 @@ void break_triangle(triangle face_tmp, vertex * v_tmp, float radius) {
     }
 }
 
-__global__ void create_icoshpere_kernal(triangle * faces, float radius, int depth) {
+__global__ void refine_icosphere_kernal(triangle * faces, float radius, unsigned int depth) {
 
-	extern __shared__ float shmem[];
+	// extern __shared__ float shmem[];
 
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const unsigned int numthrds = blockDim.x * gridDim.x;
     // unsigned tid = threadIdx.x;
 
 	unsigned int depth_c, th_len, write_offset;
 
 	vertex v_tmp[3];
-	for(depth_c=0; depth_c<depth; depth_c++){
+	depth_c  = depth;
+	// for(depth_c=0; depth_c<depth; depth_c++){
 		
 		th_len = 20*pow(4, depth_c);
-		
-		if(idx < th_len){
+		while(idx < th_len){
+
 			triangle tri_tmp = faces[idx];
 			write_offset = th_len + 3*idx;
 			
@@ -104,9 +105,11 @@ __global__ void create_icoshpere_kernal(triangle * faces, float radius, int dept
 			faces[write_offset].v[2].y = v_tmp[2].y;
 			faces[write_offset].v[2].z = v_tmp[2].z;
 			write_offset++;
+			
+			idx += numthrds;
 		}
-		__syncthreads();
-	}
+		
+	// }
     
 }
 
@@ -120,13 +123,13 @@ void cuda_cpy_output_data(){
 	CUDA_CALL(cudaMemcpy(gpu_out_faces, dev_faces, faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
 }
 
-void cuda_call_kernel() {
+void cudacall_icosphere_naive(int BW) {
 
 	// each thread works on one face
-	int ths = 20*pow(4, max_depth);
-	int n_blocks = std::min(65535, (ths + BW  - 1) / BW);
-
-	printf("radius: %f, max_depth: %d\n", radius, max_depth);
-	create_icoshpere_kernal<<<n_blocks, BW, BW*sizeof(float)>>>(dev_faces, radius, max_depth);
+	for(int i=0; i<max_depth; i++){
+		int ths = 20*pow(4, i);
+		int n_blocks = std::min(65535, (ths + BW  - 1) / BW);
+		refine_icosphere_kernal<<<n_blocks, BW>>>(dev_faces, radius, i);
+	}
 	
 }

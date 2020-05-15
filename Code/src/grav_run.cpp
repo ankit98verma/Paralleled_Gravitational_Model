@@ -46,8 +46,8 @@ cudaEvent_t stop;
     }
 
 int check_args(int argc, char **argv){
-	if (argc != 4){
-        printf("Usage: ./grav [depth] [thread_per_block] [number_of_blocks]\n");
+	if (argc != 3){
+        printf("Usage: ./grav [depth] [thread_per_block] \n");
         return 1;
     }
     return 0;
@@ -87,7 +87,7 @@ float time_profile_cpu(){
 
 
 // this function should be called only after calling time_profile_cpu
-float time_profile_gpu(){
+float time_profile_gpu(int thread_num){
 	float gpu_time_ms = 0;
 	float gpu_time_icosphere = -1;
 	float gpu_time_indata_cpy = -1;
@@ -98,7 +98,7 @@ float time_profile_gpu(){
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 	
 	START_TIMER();
-		cuda_call_kernel();
+		cudacall_icosphere_naive(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere);
 
 	START_TIMER();
@@ -137,10 +137,10 @@ void verify_gpu_output(){
         }
     }
     if(success){
-        cout << "Successful output" << endl;
+        cout << "--------Successful output--------" << endl;
     }
     else{
-    	cout << "******** NON Successful output ********" << endl;
+    	cout << "******** Unsuccessful output ********" << endl;
     }
 }
 
@@ -150,18 +150,16 @@ int main(int argc, char **argv) {
 
 	int depth = atoi(argv[1]);
 	int thread_num = atoi(argv[2]);
-	int block_num = atoi(argv[3]);
 	cout << "\nThread per block:"<< thread_num << endl;
-	cout << "Number of blocks:"<< block_num << "\n" << endl;
 
 	init_vars(depth, 1);
 	allocate_cpu_mem();
 	init_icosphere();
 
 	// calculate the distance b/w two points of icosphere
-	float norm0 = faces[0].v[0].x*faces[0].v[0].x + faces[0].v[0].y*faces[0].v[0].y + faces[0].v[0].z*faces[0].v[0].z;
-	float norm1 = faces[0].v[1].x*faces[0].v[1].x + faces[0].v[1].y*faces[0].v[1].y + faces[0].v[1].z*faces[0].v[1].z;
-	float ang = acosf((faces[0].v[0].x*faces[0].v[1].x + faces[0].v[0].y*faces[0].v[1].y + faces[0].v[0].z*faces[0].v[1].z)/(norm1*norm0));
+	float norm0 = faces_init[0].v[0].x*faces_init[0].v[0].x + faces_init[0].v[0].y*faces_init[0].v[0].y + faces_init[0].v[0].z*faces_init[0].v[0].z;
+	float norm1 = faces_init[0].v[1].x*faces_init[0].v[1].x + faces_init[0].v[1].y*faces_init[0].v[1].y + faces_init[0].v[1].z*faces_init[0].v[1].z;
+	float ang = acosf((faces_init[0].v[0].x*faces_init[0].v[1].x + faces_init[0].v[0].y*faces_init[0].v[1].y + faces_init[0].v[0].z*faces_init[0].v[1].z)/(norm1*norm0));
 	float dis = radius*ang;
 	cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 	
@@ -169,7 +167,7 @@ int main(int argc, char **argv) {
 	cout << "\n----------Running CPU Code----------\n" << endl;
 	float cpu_time = time_profile_cpu();
 	cout << "\n----------Running GPU Code----------\n" << endl;
-	float gpu_time = time_profile_gpu();
+	float gpu_time = time_profile_gpu(thread_num);
 	cout << "\n----------Verifying GPU Output----------\n" << endl;
 	verify_gpu_output();
 
