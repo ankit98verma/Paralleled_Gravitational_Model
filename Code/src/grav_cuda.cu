@@ -34,16 +34,16 @@ void break_triangle(triangle face_tmp, vertex * v_tmp, float radius) {
     }
 }
 
-__global__ void refine_icosphere_naive_kernal(triangle * faces, float radius, unsigned int depth) {
+__global__ void refine_icosphere_naive_kernal(triangle * faces, const float radius, const unsigned int depth) {
 
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
-	unsigned int th_len, write_offset;
+	unsigned int  write_offset;
 
 	vertex v_tmp[3];
 		
-	th_len = 20*pow(4, depth);
+	const unsigned int th_len = 20*pow(4, depth);
 	while(idx < th_len){
 
 		triangle tri_tmp = faces[idx];
@@ -88,90 +88,29 @@ void cudacall_icosphere_naive(int thread_num) {
 	
 }
 
-__global__ void refine_icosphere_sh_naive_kernal(triangle * faces, float radius, unsigned int depth) {
-
-	extern __shared__ triangle sh_faces[];
-	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-	unsigned int th_len, write_offset;
-
-	vertex v_tmp[3];
-
-	th_len = 20*pow(4, depth);
-	const int id = 4*threadIdx.x;
-	// copy from faces to sh_faces
-	if(idx < th_len)
-		sh_faces[id] = faces[idx];
-	__syncthreads();
-		
-	if(idx < th_len){
-
-		triangle tri_tmp = sh_faces[id];
-		
-		break_triangle(tri_tmp, v_tmp, radius);
-		// got the mid points of the vertices now make new triangles
-		sh_faces[id].v[1] = v_tmp[0];
-		sh_faces[id].v[2] = v_tmp[2];
-
-		// adding triangle V[0], P1, V[1]
-		sh_faces[id+1].v[0] = v_tmp[0];
-		sh_faces[id+1].v[1] = tri_tmp.v[1];
-		sh_faces[id+1].v[2] = v_tmp[1];
-
-		//adding triangle P2, V[1], V[2]
-		sh_faces[id+2].v[0] = v_tmp[1];
-		sh_faces[id+2].v[1] = tri_tmp.v[2];
-		sh_faces[id+2].v[2] = v_tmp[2];
-
-		//adding triangle V[0], V[1], V[2]
-		sh_faces[id+3].v[0] = v_tmp[0];
-		sh_faces[id+3].v[1] = v_tmp[1];
-		sh_faces[id+3].v[2] = v_tmp[2];
-		
-		// idx += numthrds;
-	}
-	// copy to global memory now
-	write_offset = th_len + 3*idx;
-
-	faces[idx] = sh_faces[id];
-	faces[write_offset] = sh_faces[id+1];
-	faces[write_offset+1] = sh_faces[id+2];
-	faces[write_offset+2] = sh_faces[id+3];
-    
-}
-
-void cudacall_icosphere_sh_naive(int thread_num) {
-	// each thread works on one face
-	for(int i=0; i<max_depth; i++){
-		int ths = 20*pow(4, i);
-		int n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
-		refine_icosphere_sh_naive_kernal<<<n_blocks, thread_num, 4*thread_num*sizeof(triangle)>>>(dev_faces, radius, i);
-	}
-	
-}
 
 __global__ void refine_icosphere_kernal(triangle * faces, float radius, unsigned int depth) {
 
-	// TODO implement the shared memory
-
-	// extern __shared__ float shmem[];
+	// extern __shared__ triangle sh_faces[];
 
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
-    // unsigned tid = threadIdx.x;
+	const unsigned int id = threadIdx.x;
 
-	unsigned int depth_c, th_len, write_offset;
+	unsigned int th_len, write_offset;
 
+	th_len = 20*pow(4, depth);
+	
 	vertex v_tmp[3];
 	vertex v_storage[12];
-	depth_c  = depth;
+
+	__syncthreads();
 		
-	th_len = 20*pow(4, depth_c);
 	while(idx < 4*th_len){
 		int tri_ind = idx/4;
 		int sub_tri_ind = (int)idx%4;
 
-		triangle tri_tmp = faces[tri_ind];
+		triangle tri_tmp = faces[idx/4];
 		write_offset = (sub_tri_ind == 0)*tri_ind + (sub_tri_ind!=0)*(th_len + 3*tri_ind + (idx%4-1));
 		break_triangle(tri_tmp, v_tmp, radius);
 
@@ -208,8 +147,10 @@ void cudacall_icosphere(int thread_num) {
 		// int * dev_res, * gpu_res_out;
 		// CUDA_CALL(cudaMalloc((void **)&dev_res, 4*ths * sizeof(int)));
 		// gpu_res_out = (int *)malloc(4*ths*sizeof(int));
-		thread_num = thread_num - thread_num%4;
-		int n_blocks = std::min(65535, (4*ths + thread_num  - 1) / thread_num);
+		thread_num  = thread_num - thread_num%4;
+		int n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
+
+		// refine_icosphere_kernal<<<n_blocks, thread_num, 4*thread_num*sizeof(triangle)>>>(dev_faces, radius, i);
 		refine_icosphere_kernal<<<n_blocks, thread_num>>>(dev_faces, radius, i);
 
 		// CUDA_CALL(cudaMemcpy(gpu_res_out, dev_res, 4*ths*sizeof(int), cudaMemcpyDeviceToHost));
@@ -233,5 +174,4 @@ void cuda_cpy_output_data(){
 
 void free_gpu_memory(){
 	CUDA_CALL(cudaFree(dev_faces));
-	free(gpu_out_faces);
 }

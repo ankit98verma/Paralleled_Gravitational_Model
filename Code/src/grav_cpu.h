@@ -73,9 +73,13 @@ void allocate_cpu_mem();
 void init_icosphere();
 
 void create_icoshpere();
+void create_icoshpere2();
 void fill_vertices();
 void quickSort_points(int low, int high);
 void fill_common_theta();
+
+int partition_theta(void * arr_in, int low, int high);
+void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int));
 
 void export_csv(triangle * f, string filename1, string filename2, string filename3);
 

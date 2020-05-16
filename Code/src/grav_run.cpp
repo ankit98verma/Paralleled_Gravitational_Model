@@ -19,8 +19,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include "grav_cuda.cuh"
 #include "grav_cpu.h"
+#include "grav_cuda.cuh"
 #include "helper_cuda.h"
 
 using std::cerr;
@@ -69,7 +69,7 @@ float time_profile_cpu(){
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
 	
 	START_TIMER();
-		quickSort_points(0, vertices_length-1);
+		quickSort((void *)vertices_sph, 0, vertices_length-1, partition_theta);
 	STOP_RECORD_TIMER(cpu_time_sort_ms);
     
     START_TIMER();
@@ -113,7 +113,7 @@ float time_profile_gpu(int thread_num){
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
 	START_TIMER();
-		// cudacall_icosphere_sh_naive(thread_num);
+		cudacall_icosphere(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere2);
 	err = cudaGetLastError();
     if  (cudaSuccess != err){
@@ -178,13 +178,6 @@ int main(int argc, char **argv) {
 	allocate_cpu_mem();
 	init_icosphere();
 
-	// calculate the distance b/w two points of icosphere
-	float norm0 = faces_init[0].v[0].x*faces_init[0].v[0].x + faces_init[0].v[0].y*faces_init[0].v[0].y + faces_init[0].v[0].z*faces_init[0].v[0].z;
-	float norm1 = faces_init[0].v[1].x*faces_init[0].v[1].x + faces_init[0].v[1].y*faces_init[0].v[1].y + faces_init[0].v[1].z*faces_init[0].v[1].z;
-	float ang = acosf((faces_init[0].v[0].x*faces_init[0].v[1].x + faces_init[0].v[0].y*faces_init[0].v[1].y + faces_init[0].v[0].z*faces_init[0].v[1].z)/(norm1*norm0));
-	float dis = radius*ang;
-	cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
-	
 	
 	cout << "\n----------Running CPU Code----------\n" << endl;
 	float cpu_time = time_profile_cpu();
@@ -197,6 +190,13 @@ int main(int argc, char **argv) {
 	cout << "Time taken by the GPU is: " << gpu_time << " milliseconds" << endl;
 	cout << "Speed up factor: " << cpu_time/gpu_time << "\n" << endl;
 
+	// calculate the distance b/w two points of icosphere
+	float norm0 = faces[0].v[0].x*faces[0].v[0].x + faces[0].v[0].y*faces[0].v[0].y + faces[0].v[0].z*faces[0].v[0].z;
+	float norm1 = faces[0].v[1].x*faces[0].v[1].x + faces[0].v[1].y*faces[0].v[1].y + faces[0].v[1].z*faces[0].v[1].z;
+	float ang = acosf((faces[0].v[0].x*faces[0].v[1].x + faces[0].v[0].y*faces[0].v[1].y + faces[0].v[0].z*faces[0].v[1].z)/(norm1*norm0));
+	float dis = radius*ang;
+	cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
+	
 	export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
 	export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
 	free_cpu_memory();
