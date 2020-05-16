@@ -18,7 +18,7 @@
 #include <iostream>
 #include <time.h>
 
-#include "grav_cpu.h"
+#include "grav_cpu.hpp"
 
 using std::cerr;
 using std::cout;

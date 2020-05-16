@@ -10,7 +10,7 @@
 
 
 #include "cuda_header.cuh"
-#include "grav_cpu.h"
+#include "grav_cpu.hpp"
 
 #undef  GLOBAL
 #ifdef _GRAV_CUDA_C_

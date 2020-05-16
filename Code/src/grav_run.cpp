@@ -19,7 +19,8 @@
 #include <algorithm>
 #include <cassert>
 
-#include "grav_cpu.h"
+#include "ta_utilities.hpp"
+#include "grav_cpu.hpp"
 #include "grav_cuda.cuh"
 #include "helper_cuda.h"
 
@@ -128,7 +129,7 @@ float time_profile_gpu(int thread_num){
 	
 	printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
     printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
-    printf("GPU Sh_Naive Icosphere generation time: %f ms\n", gpu_time_icosphere2);
+    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
 	printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
 	
 	gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy;
@@ -167,6 +168,9 @@ void verify_gpu_output(){
 }
 
 int main(int argc, char **argv) {
+	
+	// TA_Utilities::select_coldest_GPU();
+	
 	if(check_args(argc, argv))
 		return 1;
 
@@ -197,8 +201,8 @@ int main(int argc, char **argv) {
 	float dis = radius*ang;
 	cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 	
-	export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
-	export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
+	// export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
+	// export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
 	free_cpu_memory();
 	free_gpu_memory();
     return 1;
