@@ -20,6 +20,8 @@ using std::cout;
 using std::endl;
 
 
+
+
 __device__ void break_triangle(triangle face_tmp, vertex * v_tmp, float radius) {
 	float x_tmp, y_tmp, z_tmp, scale;
     for(int i=0; i<3; i++){
@@ -81,91 +83,93 @@ void cudacall_icosphere_naive(int thread_num) {
 	for(int i=0; i<max_depth; i++){
 		int ths = 20*pow(4, i);
 		int n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
-		refine_icosphere_naive_kernal<<<n_blocks, thread_num>>>(dev_faces, radius, i);
+		refine_icosphere_naive_kernal<<<n_blocks, thread_num>>>(dev_faces_in, radius, i);
 	}
 	
 }
 
 
-typedef void (*func_ptr_sub_triangle_t)(triangle, vertex *, triangle *, int, int);
+typedef void (*func_ptr_sub_triangle_t)(triangle, vertex *, triangle *);
 
-__device__ void sub_triangle_top(triangle face_tmp, vertex * v_tmp, triangle * faces_arr, int ind0, int ind) {
-	// int res_ind = ind0;
-    faces_arr[ind0].v[0] = face_tmp.v[0];
-    faces_arr[ind0].v[1] = v_tmp[0];
-    faces_arr[ind0].v[2] = v_tmp[2];
+__device__ void sub_triangle_top(triangle face_tmp, vertex * v_tmp, triangle * res) {
+    res->v[0] = face_tmp.v[0];
+    res->v[1] = v_tmp[0];
+    res->v[2] = v_tmp[2];
 }
 
-__device__ void sub_triangle_left(triangle face_tmp, vertex * v_tmp, triangle * faces_arr, int ind0, int ind) {
-	// int res_ind = ind;
-    faces_arr[ind].v[0] = v_tmp[0];
-    faces_arr[ind].v[1] = face_tmp.v[1];
-    faces_arr[ind].v[2] = v_tmp[1];
+__device__ void sub_triangle_left(triangle face_tmp, vertex * v_tmp, triangle * res) {
+    res->v[0] = v_tmp[0];
+    res->v[1] = face_tmp.v[1];
+    res->v[2] = v_tmp[1];
 }
 
-__device__ void sub_triangle_right(triangle face_tmp, vertex * v_tmp, triangle * faces_arr, int ind0, int ind) {
-	// int res_ind = ind;
-    faces_arr[ind].v[0] = v_tmp[1];
-    faces_arr[ind].v[1] = face_tmp.v[2];
-    faces_arr[ind].v[2] = v_tmp[2];
+__device__ void sub_triangle_right(triangle face_tmp, vertex * v_tmp, triangle * res) {
+    res->v[0] = v_tmp[1];
+    res->v[1] = face_tmp.v[2];
+    res->v[2] = v_tmp[2];
 }
 
-__device__ void sub_triangle_center(triangle face_tmp, vertex * v_tmp, triangle * faces_arr, int ind0, int ind) {
-	// int res_ind = ind;
-    faces_arr[ind].v[0] = v_tmp[0];
-    faces_arr[ind].v[1] = v_tmp[1];
-    faces_arr[ind].v[2] = v_tmp[2];
+__device__ void sub_triangle_center(triangle face_tmp, vertex * v_tmp, triangle * res) {
+    res->v[0] = v_tmp[0];
+    res->v[1] = v_tmp[1];
+    res->v[2] = v_tmp[2];
 }
 
 __device__ func_ptr_sub_triangle_t funcs2[4] = {sub_triangle_top, sub_triangle_left, sub_triangle_right, sub_triangle_center};
 
 
-__global__ void refine_icosphere_kernal(triangle * faces, const float radius, const unsigned int th_len) {
+__global__ void refine_icosphere_kernal(triangle * faces, const float radius, const unsigned int th_len, triangle * faces_out) {
 
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
-	unsigned int write_offset0, write_offset;
-	
 	vertex v_tmp[3];
 		
 	while(idx < 4*th_len){
 		int tri_ind = idx/4;
 		int sub_tri_ind = idx%4;
 
-		triangle tri_tmp = faces[tri_ind];
-		break_triangle(tri_tmp, v_tmp, radius);
-		
-		write_offset0 = tri_ind;
-		write_offset = th_len + 3*tri_ind + (sub_tri_ind-1);
+		break_triangle(faces[tri_ind], v_tmp, radius);
 
-		funcs2[sub_tri_ind](tri_tmp, v_tmp, faces, write_offset0, write_offset);
+		funcs2[sub_tri_ind](faces[tri_ind], v_tmp, &faces_out[idx]);
 	
 		idx += numthrds;
 	}
 
 }
-void cudacall_icosphere(int thread_num) {
-	// each thread creates a sub triangle
-	for(int i=0; i<max_depth; i++){
-		int ths = 20*pow(4, i);
-		int n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
-		refine_icosphere_kernal<<<n_blocks, thread_num>>>(dev_faces, radius, ths);
-	}
 
+// variables local to this file
+int ind2;
+triangle* pointers[2];
+void cudacall_icosphere(int thread_num) {
+	
+	// each thread creates a sub triangle
+	int ths, n_blocks, ind1;
+	for(int i=0; i<max_depth; i++){
+		ths = 20*pow(4, i);
+		n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
+		ind1 = i%2;
+		ind2 = (i+1)%2;
+		refine_icosphere_kernal<<<n_blocks, thread_num>>>(pointers[ind1], radius, ths, pointers[ind2]);
+	}
 }
 
 void cuda_cpy_input_data(){
 	gpu_out_faces = (triangle *)malloc(faces_length*sizeof(triangle));
-	CUDA_CALL(cudaMalloc((void **)&dev_faces, faces_length * sizeof(triangle)));
-	CUDA_CALL(cudaMemcpy(dev_faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
+	CUDA_CALL(cudaMalloc((void **)&dev_faces_in, faces_length * sizeof(triangle)));
+	CUDA_CALL(cudaMalloc((void **)&dev_faces_out, faces_length * sizeof(triangle)));
+	CUDA_CALL(cudaMemcpy(dev_faces_in, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
+
+	pointers[0] = dev_faces_in;
+	pointers[1] = dev_faces_out;
 }
 
 void cuda_cpy_output_data(){
-	CUDA_CALL(cudaMemcpy(gpu_out_faces, dev_faces, faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
+	CUDA_CALL(cudaMemcpy(gpu_out_faces, pointers[ind2], faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
 }
 
 void free_gpu_memory(){
-	CUDA_CALL(cudaFree(dev_faces));
+	CUDA_CALL(cudaFree(dev_faces_in));
+	CUDA_CALL(cudaFree(dev_faces_out));
 	free(gpu_out_faces);
 }

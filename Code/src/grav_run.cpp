@@ -62,7 +62,7 @@ float time_profile_cpu(){
 	float cpu_time_grav_pot_ms = -1;
 
 	START_TIMER();
-		create_icoshpere();
+		create_icoshpere2();
 	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
 	
 	START_TIMER();

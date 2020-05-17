@@ -19,7 +19,8 @@
 #define GLOBAL  extern
 #endif
 
-GLOBAL triangle * dev_faces;
+GLOBAL triangle * dev_faces_in;
+GLOBAL triangle * dev_faces_out;
 GLOBAL triangle * gpu_out_faces;
 
 void cuda_cpy_input_data();
