@@ -57,7 +57,7 @@ GLOBAL unsigned int vertices_length;
 GLOBAL float * potential;
 
 GLOBAL int * common_thetas_count;
-GLOBAL int * cummulative_common_theta_count;
+GLOBAL int * cumulative_common_theta_count;
 GLOBAL unsigned int common_thetas_length;
 
 // The depth of the icosphere

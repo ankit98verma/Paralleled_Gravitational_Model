@@ -36,6 +36,10 @@ unsigned int curr_faces_count;
 
 triangle * faces_copy;
 
+#define N_ZONAL 11
+#define Nt 4
+#define length_tesseral Nt*(Nt+1)/2 - 1
+
 int partition_sum(void * arr, int low, int high);
 
 void init_vars(unsigned int depth, float r){
@@ -206,10 +210,10 @@ void create_icoshpere(){
 void create_icoshpere2(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
-	
+
 	triangle triag_tmp;
 	for(unsigned int j=1; j<=max_depth; j++){
-		
+
 		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
 		unsigned int a = curr_faces_count;
 		// go through every face and divide the face into four equal parts
@@ -327,7 +331,7 @@ void fill_vertices(){
 
 int partition_theta(void * arr_in, int low, int high){
 	point_sph * arr = (point_sph *)arr_in;
-    
+
     point_sph pivot = arr[high]; // pivot
     int i = (low - 1); // Index of smaller element
   	point_sph tmp;
@@ -397,21 +401,32 @@ void fill_common_theta(){
 	}
 }
 
-void find_sin_array(float theta, float* sine_array){
+void find_sin_array(float theta, float* sine_array, int N){
     // COMPUTES the sin array to be used
     // sin_array = (1, sin(theta), (sin(theta))^2, (sin(theta))^3, (sin(theta))^4/...)
-    // powers needed till (sin(theta))^10--- therefore 12 components
+    // powers needed till (sin(theta))^N-1--- therefore N components
     sine_array[0] = 1;
 
-    for (int i=1; i<11; i++){
+    for (int i=1; i<N; i++){
         sine_array[i] = sine_array[i-1]*sin(theta);
+    }
+}
+
+void find_cosine_array(float theta, float* cosine_array, int N){
+    // COMPUTES the cos array to be used
+    // sin_array = (1, cosin(theta), (cosin(theta))^2, (cosin(theta))^3, (cosin(theta))^4/...)
+    // powers needed till (cosin(theta))^N-1
+    cosine_array[0] = 1;
+
+    for (int i=1; i<N; i++){
+        cosine_array[i] = cosine_array[i-1]*cos(theta);
     }
 }
 
 void legendre(float theta, float* P){
     // COMPUTE P_n(sin(that))
-    float sine_array[11];
-    find_sin_array(theta, sine_array);
+    float sine_array[N_ZONAL];
+    find_sin_array(theta, sine_array, N_ZONAL);
 
     P[0] = 0;
     P[1] = 0;
@@ -430,61 +445,179 @@ void potential_cal_ZONAL(float theta, float* pot_coeff){
     // INPUT: r- radius vector magnitude
     // theta - latitude in radians
     // NOTE: Zonal harmonic is a function of theta alone
-    float LEGENDRE[11];
+    float LEGENDRE[N_ZONAL];
     legendre(theta, LEGENDRE);
 
-    float ZONAL_J[11] = {0, 0, 0, 0.2541e-05, 0.1617999e-05, 0.22800004e-06, -0.5519908e-06, 0.3519996e-6, 0.2049998e-06, 0.153999e-06, 0.23699982e-06};
+    float ZONAL_J[N_ZONAL] = {0, 0, 0, 0.2541e-05, 0.1617999e-05, 0.22800004e-06, -0.5519908e-06, 0.3519996e-6, 0.2049998e-06, 0.153999e-06, 0.23699982e-06};
 
-    for (int i=0; i<11; i++){
+    for (int i=0; i<N_ZONAL; i++){
         pot_coeff[i] = ZONAL_J[i]*LEGENDRE[i];
     }
 }
 
-void cummulative_theta_count(){
-    // Finds the cumulative of common_theta_count and store in cummulative_common_theta_count
-    cummulative_common_theta_count= (int *)malloc(common_thetas_length*sizeof(int));
-    cummulative_common_theta_count[0] = common_thetas_count[0];
+
+void associated_legendre(float theta, float* P){
+    // COMPUTE P^m_n(sin(that))
+    // m=1:1:n
+    float sine_array[4];
+    find_sin_array(theta, sine_array, 4);
+
+    float cosine_array[4];
+    find_cosine_array(theta, cosine_array, 5);
+
+    P[0] = 3*sine_array[1]*cosine_array[1];
+    P[1] = 3*cosine_array[2];
+    P[2] = 1.5*cosine_array[1]*(5*sine_array[2]-1);
+    P[3] = 15*sine_array[1]*cosine_array[2];
+    P[4] = 15*cosine_array[3];
+    P[5] = 2.5*cosine_array[1]*(7*sine_array[3] - 3*sine_array[1]);
+    P[6] = 15/2*cosine_array[2]*(7*sine_array[2]-1);
+    P[7] = 105*sine_array[1]*cosine_array[3];
+    P[8] = 105*cosine_array[4];
+}
+
+void potential_cal_TESSERAL(float theta, float* pot_coeff_sin, float* pot_coeff_cosin){
+    // INPUT: r- radius vector magnitude
+    // theta: latitude in radians
+    // NOTE: Tesseral Harmonics is a function of theta alone
+
+    float ASS_LEGENDRE[length_tesseral];
+    associated_legendre(theta, ASS_LEGENDRE);
+
+    float C_nm[length_tesseral] =  {   -0.3504890360e-09,
+                                        0.1574536043e-05,
+                                        0.2192798802e-05,
+                                        0.3090160446e-06,
+                                        0.1005588574e-06,
+                                        -0.5087253036e-06,
+                                        0.7841223074e-07,
+                                        0.5921574319e-07,
+                                        -0.3982395740e-08
+                                    };
+    float S_nm[length_tesseral] =  {   0.1635406077e-08,
+                                       -0.9038680729e-06,
+                                       0.2680118938e-06,
+                                       -0.2114023978e-06,
+                                       0.1972013239e-06,
+                                       -0.4494599352e-06,
+                                       0.1481554569e-06,
+                                       -0.1201129183e-07,
+                                       0.6525605810e-08
+                                    };
+
+    for (int i=0; i<length_tesseral; i++){
+        pot_coeff_sin[i] = S_nm[i]*ASS_LEGENDRE[i];
+        pot_coeff_cosin[i] = C_nm[i]*ASS_LEGENDRE[i];
+    }
+}
+
+void cumulative_theta_count(){
+    // Finds the cumulative of common_theta_count and store in cumulative_common_theta_count
+    cumulative_common_theta_count = (int *)malloc(common_thetas_length*sizeof(int));
+    cumulative_common_theta_count[0] = common_thetas_count[0];
+//    cout<<"\n Cumulative common theta";
     for (unsigned int i=1; i<common_thetas_length; i++){
-       cummulative_common_theta_count[i] = common_thetas_count[i] + cummulative_common_theta_count[i-1];
+       cumulative_common_theta_count[i] = common_thetas_count[i] + cumulative_common_theta_count[i-1];
+//       cout<<cumulative_common_theta_count[i]<<'\t';
     }
 
 }
 
-void get_grav_pot(){
+void get_grav_pot_ZONAL(){
     // To access ith vertex use: vertices_sph[i].r, vertices_sph[i].theta and vertices_sph[i].phi
 	// The vertices_sph are sorted with respect to theta
 	// common_thetas_count gives the count of thetas with epsilon = 1e-6.
 	// common_thetas_length gives the length of the common_thetas_count array.
 	// Hence common_thetas_length effectively gives total number of unique thetas present in vertices_sph array
 
-    cummulative_theta_count();
+    cumulative_theta_count();
 
 	// Get potential coeff
-	float pot_coeff[11];
+	float pot_coeff_zonal[N_ZONAL];
 
+    // ASSIGN ZONAL POTENTIAL for all vertices because theta is common
 	for (unsigned int i=0; i<common_thetas_length; i++)
     {
-        int Theta_indice = cummulative_common_theta_count[i];
+        int Theta_indice = cumulative_common_theta_count[i];
         float THETA = vertices_sph[Theta_indice-1].theta; // Finds the common theta value
-        potential_cal_ZONAL(THETA, pot_coeff);
+        potential_cal_ZONAL(THETA, pot_coeff_zonal);
 
         if (i==0){
-            for (int j=0; j<cummulative_common_theta_count[i]; j++){
-                potential[j] = 0;
-                for (int k=3; k<11; k++)
-                    potential[j] = potential[j] + pot_coeff[k]/pow(vertices_sph[j].r,k+1);
+
+            // Compute just the first theta value and substitute the rest
+            potential[0] = 0;
+            for (int k = 3; k < N_ZONAL; k++)
+                potential[0] = potential[0] + pot_coeff_zonal[k]/pow(vertices_sph[0].r,k+1);
+
+            for (int j = 1; j < cumulative_common_theta_count[i]; j++){
+                potential[j] = potential[0];
 //                cout<<"\n potential" <<j <<'\t'<<potential[j];
             }
         }
         else{
-             for (int j=cummulative_common_theta_count[i-1]; j<cummulative_common_theta_count[i]; j++){
-                potential[j] = 0;
-                for (int k=3; k<11; k++)
-                    potential[j] = potential[j] + pot_coeff[k]/pow(vertices_sph[j].r,k+1);
+
+            int m = cumulative_common_theta_count[i-1];
+            potential[m] = 0;
+            for (int k = 3; k < N_ZONAL; k++)
+                potential[m] = potential[m] + pot_coeff_zonal[k]/pow(vertices_sph[m].r,k+1);
+
+             for (int j = cumulative_common_theta_count[i-1] + 1; j < cumulative_common_theta_count[i]; j++){
+                potential[j] = potential[m];
 //                cout<<"\n potential" <<j <<'\t'<<potential[j];
             }
         }
     }
+}
+
+
+void get_grav_pot_TESSERAL(){
+
+    float pot_coeff_tesseral_sin[length_tesseral];
+    float pot_coeff_tesseral_cos[length_tesseral];
+
+    // ASSIGN TESERAL POTENTIAL for all vertices
+	for (unsigned int i=0; i<common_thetas_length; i++)
+    {
+        int Theta_indice = cumulative_common_theta_count[i];
+        float THETA = vertices_sph[Theta_indice-1].theta; // Finds the common theta value
+        potential_cal_TESSERAL(THETA, pot_coeff_tesseral_sin, pot_coeff_tesseral_cos);
+
+        if (i==0){
+            for (int j = 0; j < cumulative_common_theta_count[i]; j++){
+                int n = 2;
+                for (int k = 0; k < length_tesseral; k++){
+                    for (int m = 1; m < n+1; m++){
+                        // have to somehow compute (m,n) for legendre information
+                        potential[j] = potential[j] + (pot_coeff_tesseral_sin[k]*sin(m*vertices_sph[j].phi) + pot_coeff_tesseral_cos[k]*cos(m*vertices_sph[j].phi))/pow(vertices_sph[j].r,n+1);
+                    }
+                    n++;
+                }
+//                cout<<"\n potential" <<j <<'\t'<<potential[j];
+            }
+
+        }
+        else{
+
+            for (int j = cumulative_common_theta_count[i-1]; j < cumulative_common_theta_count[i]; j++){
+                int n = 2;
+                for (int k = 0; k < length_tesseral; k++){
+                    for (int m = 1; m < n+1; m++){
+                        // have to somehow compute (m,n) for legendre information
+                        potential[j] = potential[j] + (pot_coeff_tesseral_sin[k]*sin(m*vertices_sph[j].phi) + pot_coeff_tesseral_cos[k]*cos(m*vertices_sph[j].phi))/pow(vertices_sph[j].r,n+1);
+                    }
+                    n++;
+                }
+//                cout<<"\n potential" <<j <<'\t'<<potential[j];
+            }
+        }
+    }
+}
+
+void get_grav_pot(){
+
+    get_grav_pot_ZONAL(); // ZONAL HARMONICS
+    get_grav_pot_TESSERAL(); // TESSERAL HARMONICS
+
 }
 
 void free_cpu_memory(){
@@ -493,7 +626,7 @@ void free_cpu_memory(){
 	free(vertices);
 	free(vertices_sph);
 	free(potential);
-	free(cummulative_common_theta_count);
+	free(cumulative_common_theta_count);
 	free(common_thetas_count);
 }
 
