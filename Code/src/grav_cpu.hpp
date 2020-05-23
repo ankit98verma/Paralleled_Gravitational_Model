@@ -68,6 +68,7 @@ GLOBAL float radius;
 
 GLOBAL float epsilon;
 
+
 void init_vars(unsigned int depth, float r);
 void allocate_cpu_mem();
 void init_icosphere();

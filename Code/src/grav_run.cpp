@@ -56,10 +56,10 @@ int check_args(int argc, char **argv){
 
 float time_profile_cpu(){
 	float cpu_time_ms = 0;
-	float cpu_time_icosphere_ms = -1;
-	float cpu_time_fill_vertices_ms = -1;
-	float cpu_time_sort_ms = -1;
-	float cpu_time_grav_pot_ms = -1;
+	float cpu_time_icosphere_ms = 0;
+	float cpu_time_fill_vertices_ms = 0;
+	float cpu_time_sort_ms = 0;
+	float cpu_time_grav_pot_ms = 0;
 
 	START_TIMER();
 		create_icoshpere2();
@@ -69,12 +69,12 @@ float time_profile_cpu(){
 		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
 	
-	START_TIMER();
-		quickSort((void *)vertices_sph, 0, vertices_length-1, partition_theta);
-	STOP_RECORD_TIMER(cpu_time_sort_ms);
+	// START_TIMER();
+		// quickSort((void *)vertices_sph, 0, vertices_length-1, partition_theta);
+	// STOP_RECORD_TIMER(cpu_time_sort_ms);
     
     START_TIMER();
-    	fill_common_theta();
+    	// fill_common_theta();
     	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
     cpu_time_ms = cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_sort_ms + cpu_time_grav_pot_ms;

@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <time.h>
+#include <sstream>
 
 
 #include "grav_cpu.hpp"
@@ -419,7 +420,7 @@ float facprod(int n, int m){
 void get_coefficients(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2]){
 
     //[ Fetching data from utilities\jared_EGM20_model.csv file
-    std::ifstream file("..\utilities\jared_EGM20_model.csv");
+    std::ifstream file("../utilities/jared_EGM20_model.csv");
     float data[2][N_N];
     for(int row = 0; row < 2; ++row)
     {
@@ -480,8 +481,8 @@ void get_coefficients(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2]){
 float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R_vec ){
     //R_vec ==  cartesian coordinate vector
 //    float Radius = vertices_sph[0].r; // The altitude is fixed throughout for all the points on the sphere
-    float Radius = sqrt(pow(R_vec[0],2) + pow(R_vec[1],2) + pow(R_vec[2],2)); // The altitude is fixed throughout for all the points on the sphere
-    float Radius_sq = pow(Radius,2);
+    // float Radius = sqrt(pow(R_vec[0],2) + pow(R_vec[1],2) + pow(R_vec[2],2)); // The altitude is fixed throughout for all the points on the sphere
+    float Radius_sq = pow(radius,2);
     float rho = pow(R_eq,2)/Radius_sq;
 
     float x0 = R_eq*R_vec[0]/Radius_sq;
@@ -569,14 +570,13 @@ void get_grav_pot(){
 //    }
 
     float R_vec[3];
-    float U[vertices_length]; // potential at each point
 
-    for (int i=0; i<vertices_length; i++){
+    for (unsigned int i=0; i<vertices_length; i++){
         R_vec[0] = vertices[i].x;
         R_vec[1] = vertices[i].y;
         R_vec[2] = vertices[i].z;
 
-        U[i] = spherical_harmonics(coeff, R_vec);
+        potential[i] = spherical_harmonics(coeff, R_vec);
     }
 }
 
