@@ -60,7 +60,7 @@ GLOBAL vertex * vertices;
 GLOBAL point_sph * vertices_sph;
 GLOBAL unsigned int vertices_length;
 GLOBAL float * potential;
-GLOBAL float ** coeff;
+GLOBAL float coeff[N_SPHERICAL +1][N_SPHERICAL +2];
 
 GLOBAL int * common_thetas_count;
 GLOBAL int * cumulative_common_theta_count;

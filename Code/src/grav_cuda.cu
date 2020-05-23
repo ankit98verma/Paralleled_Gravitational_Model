@@ -163,6 +163,19 @@ void cuda_cpy_input_data(){
 	pointers[1] = dev_faces_out;
 }
 
+void spherical_harmonics(int thread_num) {
+
+	// each thread creates a sub triangle
+	int ths, n_blocks, ind1;
+	for(int i=0; i<max_depth; i++){
+		ths = 20*pow(4, i);
+		n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
+		ind1 = i%2;
+		ind2 = (i+1)%2;
+		refine_icosphere_kernal<<<n_blocks, thread_num>>>(pointers[ind1], radius, ths, pointers[ind2]);
+	}
+}
+
 void cuda_cpy_output_data(){
 	CUDA_CALL(cudaMemcpy(gpu_out_faces, pointers[ind2], faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
 }

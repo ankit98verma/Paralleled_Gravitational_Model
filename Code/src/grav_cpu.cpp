@@ -55,9 +55,9 @@ void allocate_cpu_mem(){
 	common_thetas_length = 0;
 	potential = (float*) malloc(vertices_length*sizeof(float));
 
-	coeff = (float **)malloc((N_SPHERICAL+1) * sizeof(float*));
-    for (int i=0; i<N_SPHERICAL+1; i++)
-         *(coeff+i) = (float *)malloc((N_SPHERICAL+2) * sizeof(float));
+//	coeff = (float **)malloc((N_SPHERICAL+1) * sizeof(float*));
+//    for (int i=0; i<N_SPHERICAL+1; i++)
+//         *(coeff+i) = (float *)malloc((N_SPHERICAL+2) * sizeof(float));
 
 	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -419,6 +419,7 @@ void get_coefficients(){
 
     //[ Fetching data from utilities\jared_EGM20_model.csv file
     std::ifstream file("../utilities/jared_EGM20_model.csv");
+    cout<<"Print N_N \t"<<N_N<<'\n';
     float data[2][N_N];
     for(int row = 0; row < 2; ++row)
     {
@@ -457,18 +458,18 @@ void get_coefficients(){
             k++;
         }
 
-//    for (int row=0; row<2; row++){
-//        for (int col=0; col<((N_SPHERICAL+1)*(N_SPHERICAL+2))/2; col++)
-//            cout<<data[row][col]<<'\t';
-//        cout<<"\n \n \n";
-//
-//    }
-//
-//    for (int i=0; i<N_SPHERICAL +1; i++){
-//        cout<<"\n \n";
-//        for (int j=0; j<N_SPHERICAL+2; j++)
-//            cout<<coeff[i][j]<<'\t';
-//    }
+    for (int row=0; row<2; row++){
+        for (int col=0; col<((N_SPHERICAL+1)*(N_SPHERICAL+2))/2; col++)
+            cout<<data[row][col]<<'\t';
+        cout<<"\n \n \n";
+
+    }
+
+    for (int i=0; i<N_SPHERICAL +1; i++){
+        cout<<"\n \n";
+        for (int j=0; j<N_SPHERICAL+2; j++)
+            cout<<coeff[i][j]<<'\t';
+    }
 
     file.close();
 }
@@ -555,17 +556,25 @@ void get_grav_pot(){
 
 //    float coeff[N_SPHERICAL+1][N_SPHERICAL+2];
 
+
     for (int i=0; i<N_SPHERICAL +1; i++){
         for (int j=0; j<N_SPHERICAL+2; j++)
             coeff[i][j]=0;
     }
+
+    for (int i=0; i<N_SPHERICAL +1; i++){
+        cout<<"\n \n";
+        for (int j=0; j<N_SPHERICAL+2; j++)
+            cout<<coeff[i][j]<<'\t';
+    }
+
     get_coefficients();
 
-//    for (int i=0; i<N_SPHERICAL +1; i++){
-//        cout<<"\n \n";
-//        for (int j=0; j<N_SPHERICAL+2; j++)
-//            cout<<coeff[i][j]<<'\t';
-//    }
+    for (int i=0; i<N_SPHERICAL +1; i++){
+        cout<<"\n \n";
+        for (int j=0; j<N_SPHERICAL+2; j++)
+            cout<<coeff[i][j]<<'\t';
+    }
 
     float R_vec[3];
 
@@ -586,7 +595,7 @@ void free_cpu_memory(){
 	free(potential);
 	free(cumulative_common_theta_count);
 	free(common_thetas_count);
-	free(coeff);
+//	free(coeff);
 }
 
 
