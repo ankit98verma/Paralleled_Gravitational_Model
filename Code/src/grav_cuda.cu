@@ -1,4 +1,4 @@
-/* 
+/*
  * CUDA blur
  */
 #ifndef _GRAV_CUDA_C_
@@ -43,13 +43,13 @@ __global__ void refine_icosphere_naive_kernal(triangle * faces, const float radi
 	unsigned int  write_offset;
 
 	vertex v_tmp[3];
-		
+
 	const unsigned int th_len = 20*pow(4, depth);
 	while(idx < th_len){
 
 		triangle tri_tmp = faces[idx];
 		write_offset = th_len + 3*idx;
-		
+
 		break_triangle(tri_tmp, v_tmp, radius);
 		// got the mid points of the vertices now make new triangles
 		faces[idx].v[1] = v_tmp[0];
@@ -72,10 +72,10 @@ __global__ void refine_icosphere_naive_kernal(triangle * faces, const float radi
 		faces[write_offset].v[1] = v_tmp[1];
 		faces[write_offset].v[2] = v_tmp[2];
 		write_offset++;
-		
+
 		idx += numthrds;
 	}
-    
+
 }
 
 void cudacall_icosphere_naive(int thread_num) {
@@ -85,7 +85,7 @@ void cudacall_icosphere_naive(int thread_num) {
 		int n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
 		refine_icosphere_naive_kernal<<<n_blocks, thread_num>>>(dev_faces_in, radius, i);
 	}
-	
+
 }
 
 
@@ -124,7 +124,7 @@ __global__ void refine_icosphere_kernal(triangle * faces, const float radius, co
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
 	vertex v_tmp[3];
-		
+
 	while(idx < 4*th_len){
 		int tri_ind = idx/4;
 		int sub_tri_ind = idx%4;
@@ -132,17 +132,16 @@ __global__ void refine_icosphere_kernal(triangle * faces, const float radius, co
 		break_triangle(faces[tri_ind], v_tmp, radius);
 
 		funcs2[sub_tri_ind](faces[tri_ind], v_tmp, &faces_out[idx]);
-	
+
 		idx += numthrds;
 	}
-
 }
 
 // variables local to this file
 int ind2;
 triangle* pointers[2];
 void cudacall_icosphere(int thread_num) {
-	
+
 	// each thread creates a sub triangle
 	int ths, n_blocks, ind1;
 	for(int i=0; i<max_depth; i++){

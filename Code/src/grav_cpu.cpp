@@ -28,12 +28,6 @@ using std::endl;
 using std::ofstream;
 using std::string;
 
-#define	PI			3.1415926f
-#define R_eq    6378.1363
-#define mhu 398600 // in km^3/s^2
-#define N_SPHERICAL 20
-#define N_N (N_SPHERICAL+1)*(N_SPHERICAL+2)/2
-
 
 /*Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 float const H_ANG = PI/180*72;
@@ -60,6 +54,10 @@ void allocate_cpu_mem(){
 	common_thetas_count = (int *)malloc(vertices_length*sizeof(int));
 	common_thetas_length = 0;
 	potential = (float*) malloc(vertices_length*sizeof(float));
+
+	coeff = (float **)malloc((N_SPHERICAL+1) * sizeof(float*));
+    for (int i=0; i<N_SPHERICAL+1; i++)
+         *(coeff+i) = (float *)malloc((N_SPHERICAL+2) * sizeof(float));
 
 	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -417,7 +415,7 @@ float facprod(int n, int m){
 }
 
 
-void get_coefficients(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2]){
+void get_coefficients(){
 
     //[ Fetching data from utilities\jared_EGM20_model.csv file
     std::ifstream file("../utilities/jared_EGM20_model.csv");
@@ -478,7 +476,7 @@ void get_coefficients(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2]){
 //[
 //References:
 //1. O. Montenbruck, and E. Gill, _Satellite Orbits: Models, Methods and Applications_, 2012, p.56-68.
-float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R_vec ){
+float spherical_harmonics(float* R_vec ){
     //R_vec ==  cartesian coordinate vector
 //    float Radius = vertices_sph[0].r; // The altitude is fixed throughout for all the points on the sphere
     // float Radius = sqrt(pow(R_vec[0],2) + pow(R_vec[1],2) + pow(R_vec[2],2)); // The altitude is fixed throughout for all the points on the sphere
@@ -555,13 +553,13 @@ float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R
 
 void get_grav_pot(){
 
-    float coeff[N_SPHERICAL+1][N_SPHERICAL+2];
+//    float coeff[N_SPHERICAL+1][N_SPHERICAL+2];
 
     for (int i=0; i<N_SPHERICAL +1; i++){
         for (int j=0; j<N_SPHERICAL+2; j++)
             coeff[i][j]=0;
     }
-    get_coefficients(coeff);
+    get_coefficients();
 
 //    for (int i=0; i<N_SPHERICAL +1; i++){
 //        cout<<"\n \n";
@@ -576,7 +574,7 @@ void get_grav_pot(){
         R_vec[1] = vertices[i].y;
         R_vec[2] = vertices[i].z;
 
-        potential[i] = spherical_harmonics(coeff, R_vec);
+        potential[i] = spherical_harmonics(R_vec);
     }
 }
 
@@ -588,6 +586,7 @@ void free_cpu_memory(){
 	free(potential);
 	free(cumulative_common_theta_count);
 	free(common_thetas_count);
+	free(coeff);
 }
 
 

@@ -1,13 +1,12 @@
-/* 
+/*
  * grav_cuda.cuh
- * Kevin Yuh, 2014 
+ * Kevin Yuh, 2014
  * Revised by Nailen Matschke, 2016
  * Revised by Loko Kung, 2018
  */
 
 #ifndef _GRAV_CUDA_CUH_
 #define _GRAV_CUDA_CUH_
-
 
 #include "cuda_header.cuh"
 #include "grav_cpu.hpp"
@@ -27,6 +26,9 @@ void cuda_cpy_input_data();
 void cuda_cpy_output_data();
 void cudacall_icosphere_naive(int);
 void cudacall_icosphere(int);
+
+
+
 
 void free_gpu_memory();
 #endif

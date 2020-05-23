@@ -21,6 +21,11 @@ using std::string;
 #endif
 
 #define ICOSPHERE_INIT_FACE_LEN		20
+#define	PI			3.1415926f
+#define R_eq    6378.1363
+#define mhu 398600 // in km^3/s^2
+#define N_SPHERICAL 20
+#define N_N (N_SPHERICAL+1)*(N_SPHERICAL+2)/2
 
 struct vertex
 {
@@ -55,6 +60,7 @@ GLOBAL vertex * vertices;
 GLOBAL point_sph * vertices_sph;
 GLOBAL unsigned int vertices_length;
 GLOBAL float * potential;
+GLOBAL float ** coeff;
 
 GLOBAL int * common_thetas_count;
 GLOBAL int * cumulative_common_theta_count;
@@ -85,6 +91,9 @@ void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int
 void export_csv(triangle * f, string filename1, string filename2, string filename3);
 
 //void get_grav_pot(vertex * vertices, int vertices_length);
+void get_coefficients();
+float facprod(int n, int m);
+float spherical_harmonics(float* R_vec );
 void get_grav_pot();
 
 void free_cpu_memory();
