@@ -6,9 +6,7 @@
 
 #ifndef _GRAV_CPU_H_
 #define _GRAV_CPU_H_
-#define	PI			3.1415926f
-#define R_eq    6378.1363
-#define mhu 398600 // in km^3/s^2
+
 
 #include <cstdio>
 #include <cstdlib>
@@ -23,9 +21,11 @@ using std::string;
 #define GLOBAL  extern
 #endif
 
+#define	PI			3.1415926f
+#define R_eq    	6378.1363
+#define mhu 		398600 			// in km^3/s^2
 #define ICOSPHERE_INIT_FACE_LEN		20
-#define N_SPHERICAL 20
-GLOBAL float coeff[N_SPHERICAL+1][N_SPHERICAL+2];
+#define N_SPHERICAL 				20
 
 struct vertex
 {
@@ -35,20 +35,13 @@ struct vertex
 };
 typedef struct vertex vertex;
 
-struct point_sph
-{
-    float r;
-    float theta;
-    float phi;
-};
-typedef struct point_sph point_sph;
-
 struct triangle
 {
     vertex v[3];
 };
 typedef struct triangle triangle;
 
+/**** Variables related to Icosphere ****/
 
 // faces of the icosphere
 GLOBAL triangle * faces;
@@ -57,10 +50,7 @@ GLOBAL unsigned int faces_length;
 
 // vertices of the icosphere
 GLOBAL vertex * vertices;
-GLOBAL point_sph * vertices_sph;
 GLOBAL unsigned int vertices_length;
-GLOBAL float * potential;
-//GLOBAL float * coeff;
 
 // The depth of the icosphere
 GLOBAL unsigned int max_depth;
@@ -68,25 +58,25 @@ GLOBAL unsigned int max_depth;
 // Information of sphere
 GLOBAL float radius;
 
+/**** Variables related to gravitational potential ****/
+GLOBAL float coeff[N_SPHERICAL+1][N_SPHERICAL+2];
+GLOBAL float * potential;
+
+/**** General use variables ****/
 GLOBAL float epsilon;
 
-
 void init_vars(unsigned int depth, float r);
-void allocate_cpu_mem();
+void allocate_cpu_mem(bool verbose);
 void init_icosphere();
 
 void create_icoshpere();
-void create_icoshpere2();
 void fill_vertices();
 void quickSort_points(int low, int high);
 void fill_common_theta();
 
-int partition_theta(void * arr_in, int low, int high);
 void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int));
 
 void export_csv(triangle * f, string filename1, string filename2, string filename3);
-
-//void get_grav_pot(vertex * vertices, int vertices_length);
 
 void get_grav_pot();
 

@@ -54,15 +54,14 @@ int check_args(int argc, char **argv){
     return 0;
 }
 
-float time_profile_cpu(){
+float time_profile_cpu(bool verbose){
 	float cpu_time_ms = 0;
 	float cpu_time_icosphere_ms = 0;
 	float cpu_time_fill_vertices_ms = 0;
-	float cpu_time_sort_ms = 0;
 	float cpu_time_grav_pot_ms = 0;
 
 	START_TIMER();
-		create_icoshpere2();
+		create_icoshpere();
 	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
 
 	START_TIMER();
@@ -72,17 +71,19 @@ float time_profile_cpu(){
 	START_TIMER();
     	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
-    cpu_time_ms = cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_sort_ms + cpu_time_grav_pot_ms;
-    printf("Icosphere generation time: %f ms\n", cpu_time_icosphere_ms);
-    printf("Fill vertices time: %f ms\n", cpu_time_fill_vertices_ms);
-	printf("Sorting time: %f ms\n", cpu_time_sort_ms);
-	printf("Gravitational potential time: %f ms\n", cpu_time_grav_pot_ms);
+    cpu_time_ms = cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_grav_pot_ms;
+    
+    if(verbose){
+	    printf("Icosphere generation time: %f ms\n", cpu_time_icosphere_ms);
+	    printf("Fill vertices time: %f ms\n", cpu_time_fill_vertices_ms);
+		printf("Gravitational potential time: %f ms\n", cpu_time_grav_pot_ms);
+    }
 
 	return cpu_time_ms;
 }
 
 // this function should be called only after calling time_profile_cpu
-float time_profile_gpu(int thread_num){
+float time_profile_gpu(int thread_num, bool verbose){
 	float gpu_time_ms = 0;
 	float gpu_time_icosphere = -1, gpu_time_icosphere2 =-1;
 	float gpu_time_indata_cpy = -1;
@@ -98,10 +99,11 @@ float time_profile_gpu(int thread_num){
 		cudacall_icosphere_naive(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere);
 	cudaError err = cudaGetLastError();
-    if  (cudaSuccess != err){
-            cerr << "Error " << cudaGetErrorString(err) << endl;
-    } else {
-            cerr << "No kernel error detected" << endl;
+    if (cudaSuccess != err){
+        cerr << "Error " << cudaGetErrorString(err) << endl;
+    }else{
+    	if(verbose)
+        	cerr << "No kernel error detected" << endl;
     }
 
 	free_gpu_memory();
@@ -113,10 +115,11 @@ float time_profile_gpu(int thread_num){
 		cudacall_icosphere(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere2);
 	err = cudaGetLastError();
-    if  (cudaSuccess != err){
-            cerr << "Error " << cudaGetErrorString(err) << endl;
-    } else {
-            cerr << "No kernel error detected" << endl;
+    if (cudaSuccess != err){
+        cerr << "Error " << cudaGetErrorString(err) << endl;
+    }else{
+    	if(verbose)
+        	cerr << "No kernel error detected" << endl;
     }
 
     // COMPUTING GRAVITATIONAL POTENTIAL
@@ -128,17 +131,20 @@ float time_profile_gpu(int thread_num){
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
-	printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
-    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
-    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
-	printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
+
+	if(verbose){
+		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
+	    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
+	    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
+		printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
+	}
 
 	gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy;
 
 	return gpu_time_ms;
 }
 
-void verify_gpu_output(){
+void verify_gpu_output(bool verbose){
 
 	vertex * v = (vertex *)faces;
 	vertex * gpu_out_v = (vertex *)gpu_out_faces;
@@ -161,52 +167,67 @@ void verify_gpu_output(){
         }
     }
     if(success){
-        cout << "--------Successful output--------" << endl;
+    	if(verbose)
+        	cout << "--------Successful output--------" << endl;
     }
     else{
     	cout << "******** Unsuccessful output ********" << endl;
     }
 }
 
-int main(int argc, char **argv) {
+void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 
-	// TA_Utilities::select_coldest_GPU();
-
-	if(check_args(argc, argv))
-		return 1;
-
-	int depth = atoi(argv[1]);
 //	N_SPHERICAL = atoi(argv[2]);
-	int thread_num = atoi(argv[2]);
-	cout << "\nThread per block:"<< thread_num << endl;
+	if(thread_num > 1024){
+		cout << "Thread per block exceeds its maximum limit of 1024.\n Using 1024 threads per block" << endl; 
+	}
+	if(verbose)
+		cout << "\nThread per block:"<< thread_num << endl;
 
 	init_vars(depth, 1);
-	allocate_cpu_mem();
+	allocate_cpu_mem(verbose);
 	init_icosphere();
 
+	if(verbose)
+		cout << "\n----------Running CPU Code----------\n" << endl;
+	float cpu_time = time_profile_cpu(verbose);
+	
+	if(verbose)
+		cout << "\n----------Running GPU Code----------\n" << endl;
+	float gpu_time = time_profile_gpu(thread_num, verbose);
+	if(verbose)
+		cout << "\n----------Verifying GPU Output----------\n" << endl;
+	verify_gpu_output(verbose);
 
-	cout << "\n----------Running CPU Code----------\n" << endl;
-	float cpu_time = time_profile_cpu();
-	cout << "\n----------Running GPU Code----------\n" << endl;
-	float gpu_time = time_profile_gpu(thread_num);
-	cout << "\n----------Verifying GPU Output----------\n" << endl;
-	verify_gpu_output();
-
-	cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;
-	cout << "Time taken by the GPU is: " << gpu_time << " milliseconds" << endl;
-	cout << "Speed up factor: " << cpu_time/gpu_time << "\n" << endl;
+	if(verbose){
+		cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;
+		cout << "Time taken by the GPU is: " << gpu_time << " milliseconds" << endl;
+		cout << "Speed up factor: " << cpu_time/gpu_time << "\n" << endl;
+	}
 
 	// calculate the distance b/w two points of icosphere
 	float norm0 = faces[0].v[0].x*faces[0].v[0].x + faces[0].v[0].y*faces[0].v[0].y + faces[0].v[0].z*faces[0].v[0].z;
 	float norm1 = faces[0].v[1].x*faces[0].v[1].x + faces[0].v[1].y*faces[0].v[1].y + faces[0].v[1].z*faces[0].v[1].z;
 	float ang = acosf((faces[0].v[0].x*faces[0].v[1].x + faces[0].v[0].y*faces[0].v[1].y + faces[0].v[0].z*faces[0].v[1].z)/(norm1*norm0));
 	float dis = radius*ang;
-	cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
+	if(verbose)
+		cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 
 	// export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
 	// export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
 	free_cpu_memory();
 	free_gpu_memory();
+}
+
+int main(int argc, char **argv) {
+
+	// TA_Utilities::select_coldest_GPU();
+	if(check_args(argc, argv))
+		return 0;
+	
+	run(atoi(argv[1]), atoi(argv[2]), 0, 1, false);
+
+	
     return 1;
 }
 

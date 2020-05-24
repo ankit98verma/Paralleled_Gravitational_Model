@@ -27,16 +27,28 @@ using namespace std;
 
 /*Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 float const H_ANG = PI/180*72;
-// elevation = 26.565 degree
-float const ELE_ANG = atanf(1.0f / 2);
+float const ELE_ANG = atanf(1.0f / 2);	// elevation = 26.565 degree
 unsigned int curr_faces_count;
-class path;
 
 triangle * faces_copy;
 
+
+/* Decleration of local functions */
 int partition_sum(void * arr, int low, int high);
 void get_coefficients();
 
+/*******************************************************************************
+ * Function:        init_vars
+ *
+ * Description:     This function initializes global variables. This should be 
+ *					the first function to be called from this file.
+ *
+ * Arguments:       unsigned int depth: The maximum depth of the icosphere
+ *					float r: The radius of sphere
+ *
+ * Return Values:   None.
+ *
+*******************************************************************************/
 void init_vars(unsigned int depth, float r){
 	epsilon = 1e-6;
 	max_depth = depth;
@@ -46,21 +58,50 @@ void init_vars(unsigned int depth, float r){
 	get_coefficients();
 }
 
-void allocate_cpu_mem(){
+/*******************************************************************************
+ * Function:        allocate_cpu_mem
+ *
+ * Description:     This function dynamically allocate memory for the variables
+ *					in the CPU memory. This function should be called only after
+ *					"init_vars" function. This should be the second function to 
+ *					be called from this file.
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *									console.
+ *
+ * Return Values:   None.
+ *
+*******************************************************************************/
+void allocate_cpu_mem(bool verbose){
     faces_length = 20*pow(4, max_depth);
 	vertices_length = faces_length/2 + 2;
 	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
-	vertices_sph = (point_sph *)malloc(vertices_length*sizeof(point_sph));
 	potential = (float*) malloc(vertices_length*sizeof(float));
 	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
 	faces_copy = (triangle *)malloc(faces_length*sizeof(triangle));
 
-	cout << "\nDepth: " << max_depth << endl;
-	cout << "Faces: " << faces_length << endl;
-	cout << "Number of vertices: "<< vertices_length << "\n" << endl;
+	if(verbose){
+		cout << "\nDepth: " << max_depth << endl;
+		cout << "Faces: " << faces_length << endl;
+		cout << "Number of vertices: "<< vertices_length << "\n" << endl;
+	}
 }
 
+/*******************************************************************************
+ * Function:        init_icosphere
+ *
+ * Description:     This function dynamically allocate memory for the variables
+ *					in the CPU memory. This function should be called only after
+ *					"init_vars" function. This should be the second function to 
+ *					be called from this file.
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *									console.
+ *
+ * Return Values:   None.
+ *
+*******************************************************************************/
 void init_icosphere(){
 	//Todo: Add initial vertices and edges
 	float z = radius*sinf(ELE_ANG);
@@ -157,54 +198,6 @@ void get_midpoints(triangle tmp, triangle * tri){
 void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
-	triangle triag_tmp;
-	//Todo: generate icosphere of depth
-	for(unsigned int j=1; j<=max_depth; j++){
-		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
-		unsigned int a = curr_faces_count;
-		// go through every face and divide the face into four equal parts
-		for(unsigned int i=0; i<a; i++){
-			triangle tri_i = faces[i];
-			/* compute 3 new vertices by splitting half on each edge
-	        *         P0
-	        *        / \
-	        *  V[0] *---* V[2]
-	        *      / \ / \
-	        *    P1---*---P2
-	        *         V[1]
-	        */
-			get_midpoints(tri_i, &triag_tmp);
-
-			//adding triangle P0, V[0], V[2]
-			faces[i].v[1] = triag_tmp.v[0];
-			faces[i].v[2] = triag_tmp.v[2];
-
-			//adding triangle V[0], P1, V[1]
-			faces[curr_faces_count].v[0] = triag_tmp.v[0];
-			faces[curr_faces_count].v[1] = tri_i.v[1];
-			faces[curr_faces_count].v[2] = triag_tmp.v[1];
-			curr_faces_count++;
-
-			//adding triangle P2, V[1], V[2]
-			faces[curr_faces_count].v[0] = triag_tmp.v[1];
-			faces[curr_faces_count].v[1] = tri_i.v[2];
-			faces[curr_faces_count].v[2] = triag_tmp.v[2];
-			curr_faces_count++;
-
-			//adding triangle V[0], V[1], V[2]
-			faces[curr_faces_count].v[0] = triag_tmp.v[0];
-			faces[curr_faces_count].v[1] = triag_tmp.v[1];
-			faces[curr_faces_count].v[2] = triag_tmp.v[2];
-			curr_faces_count++;
-		}
-	}
-	memcpy(faces_copy, faces, faces_length*sizeof(triangle));
-	// cout << "Final curr face count: "<< curr_faces_count<< endl;
-}
-
-void create_icoshpere2(){
-	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
-	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
 
 	triangle triag_tmp;
 	for(unsigned int j=1; j<=max_depth; j++){
@@ -248,25 +241,18 @@ void create_icoshpere2(){
 		}
 		memcpy(faces, faces_copy, curr_faces_count*sizeof(triangle));
 	}
-	// memcpy(faces_copy, faces, faces_length*sizeof(triangle));
-	// cout << "Final curr face count: "<< curr_faces_count<< endl;
 }
 
-void export_csv(triangle * f, string filename1, string filename2, string filename3){
+void export_csv(triangle * f, string filename1, string filename2){
 	cout << "Exporting: " << filename1 << ", " << filename2 <<endl;
 
 	ofstream obj_stream;
 	obj_stream.open(filename1);
 	obj_stream << "x, y, z" << endl;
-	ofstream obj_stream3;
-	obj_stream3.open(filename3);
-	obj_stream3 << "r, theta, phi" << endl;
 	for(unsigned int i=0; i< vertices_length; i++){
 		obj_stream << vertices[i].x << ", " << vertices[i].y << ", " << vertices[i].z << endl;
-		obj_stream3 << 	vertices_sph[i].r << ", " << vertices_sph[i].theta << ", " << vertices_sph[i].phi << endl;
 	}
 	obj_stream.close();
-	obj_stream3.close();
 
 	ofstream obj_stream2;
 	obj_stream2.open(filename2);
@@ -282,7 +268,6 @@ void export_csv(triangle * f, string filename1, string filename2, string filenam
 
 void fill_vertices(){
 	quickSort((void *)faces, 0, 3*faces_length-1, partition_sum);
-	// quickSort_points(0, 3*faces_length-1);
 
 	int is_add=1;
 	vertex * all_vs = (vertex *)faces;
@@ -291,9 +276,6 @@ void fill_vertices(){
 	vertices[0].z = all_vs[0].z;
 	unsigned int c_start = 0, c_end = 1;
 
-	vertices_sph[c_end].r = 1;
-	vertices_sph[c_end].theta = atan2f(vertices[c_end].z, sqrtf(vertices[c_end].x*vertices[c_end].x + vertices[c_end].y*vertices[c_end].y));
-	vertices_sph[c_end].phi = atan2f(vertices[c_end].y, vertices[c_end].x);
 	for(unsigned int i=1; i<3*faces_length; i++){
 		float sum_i = all_vs[i].x+all_vs[i].y+all_vs[i].z;
 		float sum_i_1 = all_vs[i-1].x+all_vs[i-1].y+all_vs[i-1].z;
@@ -315,9 +297,6 @@ void fill_vertices(){
 			vertices[c_end].x = all_vs[i].x;
 			vertices[c_end].y = all_vs[i].y;
 			vertices[c_end].z = all_vs[i].z;
-			vertices_sph[c_end].r = 1;
-			vertices_sph[c_end].theta = atan2f(vertices[c_end].z, sqrtf(vertices[c_end].x*vertices[c_end].x + vertices[c_end].y*vertices[c_end].y));
-			vertices_sph[c_end].phi = atan2f(vertices[c_end].y, vertices[c_end].x);
 			c_end++;
 		}
 	}
@@ -525,7 +504,6 @@ void free_cpu_memory(){
 	free(faces);
 	free(faces_copy);
 	free(vertices);
-	free(vertices_sph);
 	free(potential);
 }
 
