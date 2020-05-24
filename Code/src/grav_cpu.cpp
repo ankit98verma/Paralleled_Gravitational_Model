@@ -22,11 +22,7 @@
 
 #include "grav_cpu.hpp"
 
-using std::cerr;
-using std::cout;
-using std::endl;
-using std::ofstream;
-using std::string;
+using namespace std;
 
 #define	PI			3.1415926f
 #define R_eq    6378.1363
@@ -416,31 +412,22 @@ float facprod(int n, int m){
     return p;
 }
 
-
 void get_coefficients(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2]){
-
-    //[ Fetching data from utilities\jared_EGM20_model.csv file
-    std::ifstream file("../utilities/jared_EGM20_model.csv");
-    float data[2][N_N];
-    for(int row = 0; row < 2; ++row)
+    ifstream file("utilities/GRAVITY_MODEL.txt");
+    float data[N_N][4];
+	string line;int row=0;
+    while (!file.eof())
     {
-        std::string line;
-        std::getline(file, line);
-        if ( !file.good() )
-            break;
-
-        std::stringstream iss(line);
-
-        for (int col = 0; col < N_N; ++col)
+    	
+        getline(file, line);
+        stringstream iss(line);
+        for (int col = 0; col < 4; ++col)
         {
-            std::string val;
-            std::getline(iss, val, ',');
-            if ( !iss.good() )
-                break;
-
-            std::stringstream convertor(val);
-            convertor >> data[row][col];
+            iss >> data[row][col];
+            cout << data[row][col] << "\t";
         }
+        cout << "\n";
+        row++;
     }
 
     int k=0;

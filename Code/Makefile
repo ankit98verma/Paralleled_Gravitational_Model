@@ -12,7 +12,7 @@ CUDA_OBJ = $(OBJDIR)/cuda.o
 
 # Input Names
 CUDA_FILES = src/grav_cuda.cu
-CPP_FILES = src/grav_cpu.cpp src/grav_run.cpp
+CPP_FILES = src/grav_cpu.cpp src/grav_run.cpp src/ta_utilities.cpp
 
 # ------------------------------------------------------------------------------
 
