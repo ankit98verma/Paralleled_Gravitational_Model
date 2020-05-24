@@ -72,7 +72,7 @@ float time_profile_cpu(bool verbose){
     	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
     cpu_time_ms = cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_grav_pot_ms;
-    
+
     if(verbose){
 	    printf("Icosphere generation time: %f ms\n", cpu_time_icosphere_ms);
 	    printf("Fill vertices time: %f ms\n", cpu_time_fill_vertices_ms);
@@ -152,7 +152,7 @@ void verify_gpu_potential(bool verbose){
 
 	bool success = true;
     for (unsigned int i=0; i<vertices_length; i++){
-        if (fabs(gpu_potential[i] - potential[i]) >= epsilon){
+        if (fabs(gpu_potential[i] - potential[i]) >= epsilon_pot){
             success = false;
             cerr << "Incorrect potential calculation at " << i << " Vertex: "<< gpu_potential[i]<< ", " << potential[i] << endl;
         }
@@ -202,7 +202,7 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 
 //	N_SPHERICAL = atoi(argv[2]);
 	if(thread_num > 1024){
-		cout << "Thread per block exceeds its maximum limit of 1024.\n Using 1024 threads per block" << endl; 
+		cout << "Thread per block exceeds its maximum limit of 1024.\n Using 1024 threads per block" << endl;
 	}
 	if(verbose)
 		cout << "\nThread per block:"<< thread_num << endl;
@@ -214,7 +214,7 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	if(verbose)
 		cout << "\n----------Running CPU Code----------\n" << endl;
 	float cpu_time = time_profile_cpu(verbose);
-	
+
 	if(verbose)
 		cout << "\n----------Running GPU Code----------\n" << endl;
 	float gpu_time = time_profile_gpu(thread_num, verbose);
@@ -224,14 +224,6 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	if(verbose)
 		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
 	verify_gpu_potential(verbose);
-
-//    for (int i=0; i<N_SPHERICAL; i++)
-//        cout<<coeff[i][i]<<'\n';
-//
-//	for (int i=0; i<vertices_length; i++)
-//    {
-//        cout<<potential[i]<<'\n';
-//    }
 
 	if(verbose){
 		cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;
@@ -258,10 +250,10 @@ int main(int argc, char **argv) {
 	// TA_Utilities::select_coldest_GPU();
 	if(check_args(argc, argv))
 		return 0;
-	
-	run(atoi(argv[1]), atoi(argv[2]), 0, 1, false);
 
-	
+	run(atoi(argv[1]), atoi(argv[2]), 0, 1, true);
+
+
     return 1;
 }
 

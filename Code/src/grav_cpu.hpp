@@ -66,6 +66,7 @@ GLOBAL float * potential;
 
 /**** General use variables ****/
 GLOBAL float epsilon;
+GLOBAL float epsilon_pot;
 
 void init_vars(unsigned int depth, float r);
 void allocate_cpu_mem(bool verbose);
