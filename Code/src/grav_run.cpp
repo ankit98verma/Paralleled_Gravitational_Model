@@ -223,7 +223,7 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	verify_gpu_output(verbose);
 	if(verbose)
 		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
-	verify_gpu_potential(verbose);
+	// verify_gpu_potential(verbose);
 
 //    for (int i=0; i<N_SPHERICAL; i++)
 //        cout<<coeff[i][i]<<'\n';
@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
 	if(check_args(argc, argv))
 		return 0;
 	
-	run(atoi(argv[1]), atoi(argv[2]), 0, 1, false);
+	run(atoi(argv[1]), atoi(argv[2]), 0, 1, true);
 
 	
     return 1;

@@ -20,10 +20,16 @@ using std::cout;
 using std::endl;
 
 
+// variables local to this file
 float* dev_coeff;
 float* dev_potential;
 vertex* dev_vertices;
 
+int ind2;
+triangle* pointers[2];
+triangle * dev_faces_in;
+triangle * dev_faces_out;
+triangle * dev_verties;
 
 __device__ void break_triangle(triangle face_tmp, vertex * v_tmp, float radius) {
 	float x_tmp, y_tmp, z_tmp, scale;
@@ -141,9 +147,6 @@ __global__ void refine_icosphere_kernal(triangle * faces, const float radius, co
 
 }
 
-// variables local to this file
-int ind2;
-triangle* pointers[2];
 void cudacall_icosphere(int thread_num) {
 
 	// each thread creates a sub triangle
@@ -158,96 +161,130 @@ void cudacall_icosphere(int thread_num) {
 
 }
 
-// __device__ void gpu_facprod(int n, int m, float * p){
+__global__ 
+void kernal_sort_faces(vertex * vertices, const unsigned int vertices_length, int iter){
+	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+	const unsigned int numthrds = blockDim.x * gridDim.x;
 
+    vertex tmp, tmp1, min_v, max_v;
+    float sum_i, sum_i1;
+	while(idx+1 < vertices_length){
+        
+        if((iter+idx)%2==0){
+            tmp = vertices[idx];
+            tmp1 = vertices[idx+1];
+            
+            sum_i = tmp.x+tmp.y+tmp.z;
+            sum_i1 = tmp1.x+tmp1.y+tmp1.z;
+            if(sum_i < sum_i1){
+                min_v = tmp;
+                max_v = tmp1;
+            }else{
+                min_v = tmp1;
+                max_v = tmp;
+            }
+            // even iter , even thread works
+            vertices[idx] = min_v;
+            vertices[idx+1] = max_v;
+        }		
+		idx += numthrds;
+	}
+}
 
-//     for (int i = n-m+1; i<=n+m; i++){
-//         *p = *p/i;
-//     }
-// }
+void cudacall_sort(int thread_num) {
+
+    // each thread creates a sub triangle
+    int n_blocks;
+    int len = vertices_length;
+    for(int i=0; i<max_depth; i++){
+        n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+        kernal_sort_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2], vertices_length, i);
+    }
+
+}
 
 
 __device__ void gpu_spherical_harmonics(float radius, int n_sph, vertex dev_R_vec, float* dev_coeff, float* U, int thread_index){
 
     // Define pseudo coefficients
-    float Radius_sq = powf(radius,2);
-    float rho = powf(R_eq,2)/Radius_sq;
+    // float Radius_sq = powf(radius,2);
+    // float rho = powf(R_eq,2)/Radius_sq;
 
-    float x0 = R_eq*dev_R_vec.x/Radius_sq;
-    float y0 = R_eq*dev_R_vec.y/Radius_sq;
-    float z0 = R_eq*dev_R_vec.z/Radius_sq;
+    // float x0 = R_eq*dev_R_vec.x/Radius_sq;
+    // float y0 = R_eq*dev_R_vec.y/Radius_sq;
+    // float z0 = R_eq*dev_R_vec.z/Radius_sq;
 
-    //Initialize Intermediary Matrices
-    float V[n_sph+1][n_sph+1];
-    float W[n_sph+1][n_sph+1];
+    // //Initialize Intermediary Matrices
+    // float V[n_sph+1][n_sph+1];
+    // float W[n_sph+1][n_sph+1];
 
-    // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
-    V[0][0] = R_eq /sqrtf(Radius_sq);
-    W[0][0] = 0.0;
+    // // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
+    // V[0][0] = R_eq /sqrtf(Radius_sq);
+    // W[0][0] = 0.0;
 
-    V[1][0] = z0 * V[0][0];
-    W[1][0] = 0.0;
+    // V[1][0] = z0 * V[0][0];
+    // W[1][0] = 0.0;
 
-    for (int n=2; n<n_sph+1; n++){
-        V[n][0] = ((2*n-1)*z0*V[n-1][0] - (n-1)*rho*V[n-2][0])/n;
-        W[n][0] = 0.0;
-    } // Eqn 3.30
+    // for (int n=2; n<n_sph+1; n++){
+    //     V[n][0] = ((2*n-1)*z0*V[n-1][0] - (n-1)*rho*V[n-2][0])/n;
+    //     W[n][0] = 0.0;
+    // } // Eqn 3.30
 
 
-    //Calculate tesseral and sectoral terms
-    for (int m = 1; m < n_sph + 1; m++){
-        // Eqn 3.29
-        V[m][m] = (2*m-1)*(x0*V[m-1][m-1] - y0*W[m-1][m-1]);
-        W[m][m] = (2*m-1)*(x0*W[m-1][m-1] + y0*V[m-1][m-1]);
+    // //Calculate tesseral and sectoral terms
+    // for (int m = 1; m < n_sph + 1; m++){
+    //     // Eqn 3.29
+    //     V[m][m] = (2*m-1)*(x0*V[m-1][m-1] - y0*W[m-1][m-1]);
+    //     W[m][m] = (2*m-1)*(x0*W[m-1][m-1] + y0*V[m-1][m-1]);
 
-        // n=m+1 (only one term)
-        if (m < n_sph){
-            V[m+1][m] = (2*m+1)*z0*V[m][m];
-            W[m+1][m] = (2*m+1)*z0*W[m][m];
-        }
+    //     // n=m+1 (only one term)
+    //     if (m < n_sph){
+    //         V[m+1][m] = (2*m+1)*z0*V[m][m];
+    //         W[m+1][m] = (2*m+1)*z0*W[m][m];
+    //     }
 
-        for (int n = m+2; n<n_sph+1; n++){
-            V[n][m] = ((2*n-1)*z0*V[n-1][m]-(n+m-1)*rho*V[n-2][m])/(n-m);
-            W[n][m] = ((2*n-1)*z0*W[n-1][m]-(n+m-1)*rho*W[n-2][m])/(n-m);
-        }
-    }
+    //     for (int n = m+2; n<n_sph+1; n++){
+    //         V[n][m] = ((2*n-1)*z0*V[n-1][m]-(n+m-1)*rho*V[n-2][m])/(n-m);
+    //         W[n][m] = ((2*n-1)*z0*W[n-1][m]-(n+m-1)*rho*W[n-2][m])/(n-m);
+    //     }
+    // }
 
-    float pseudo_coeff[n_sph+1][n_sph+2];
-    for (int row =0; row<n_sph+1; row++){
-        for (int col= 0; col<n_sph+2; col++){
-            pseudo_coeff[row][col] = dev_coeff[row*(n_sph+1) + col];
-        }
-    }
+    // float pseudo_coeff[n_sph+1][n_sph+2];
+    // for (int row =0; row<n_sph+1; row++){
+    //     for (int col= 0; col<n_sph+2; col++){
+    //         pseudo_coeff[row][col] = dev_coeff[row*(n_sph+1) + col];
+    //     }
+    // }
 
-    // Calculate potential
-    float C = 0; // Cnm coeff
-    float S = 0; // Snm coeff
-    float N = 0; // normalisation number
-    float p = 0;
-    U[thread_index] = 0; //potential
-    for (int m=0; m<n_sph+1; m++){
-        for (int n = m; n<n_sph+1; n++){
-            C = 0;
-            S = 0;
-            if (m==0){
-                N = sqrt(2*n+1);
-                C = N*pseudo_coeff[n][0];
-                U[thread_index] = C*V[n][0];
-            }
-            else {
-                // gpu_facprod(n,m,&p);
-            	for (int i = n-m+1; i<=n+m; i++){
-			        p = p/i;
-			    }
-                N = sqrt((2)*(2*n+1)*p);
-                C = N*pseudo_coeff[n][m];
-                S = N*pseudo_coeff[n_sph-n][n_sph-m+1];
-            }
-            U[thread_index] = U[thread_index] + C*V[n][m] + S*W[n][m];
-            // Calculation of the Gravitational Potential Calculation model
-        }
-    }
-    U[thread_index] = U[thread_index]*mhu/R_eq;
+    // // Calculate potential
+    // float C = 0; // Cnm coeff
+    // float S = 0; // Snm coeff
+    // float N = 0; // normalisation number
+    // float p = 0;
+    // U[thread_index] = 0; //potential
+    // for (int m=0; m<n_sph+1; m++){
+    //     for (int n = m; n<n_sph+1; n++){
+    //         C = 0;
+    //         S = 0;
+    //         if (m==0){
+    //             N = sqrt(2*n+1);
+    //             C = N*pseudo_coeff[n][0];
+    //             U[thread_index] = C*V[n][0];
+    //         }
+    //         else {
+    //             // gpu_facprod(n,m,&p);
+    //         	for (int i = n-m+1; i<=n+m; i++){
+			 //        p = p/i;
+			 //    }
+    //             N = sqrt((2)*(2*n+1)*p);
+    //             C = N*pseudo_coeff[n][m];
+    //             S = N*pseudo_coeff[n_sph-n][n_sph-m+1];
+    //         }
+    //         U[thread_index] = U[thread_index] + C*V[n][m] + S*W[n][m];
+    //         // Calculation of the Gravitational Potential Calculation model
+    //     }
+    // }
+    // U[thread_index] = U[thread_index]*mhu/R_eq;
 }
 
 
