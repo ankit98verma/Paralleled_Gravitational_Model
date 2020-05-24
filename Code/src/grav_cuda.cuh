@@ -1,6 +1,6 @@
-/* 
+/*
  * grav_cuda.cuh
- * Kevin Yuh, 2014 
+ * Kevin Yuh, 2014
  * Revised by Nailen Matschke, 2016
  * Revised by Loko Kung, 2018
  */
@@ -22,11 +22,14 @@
 GLOBAL triangle * dev_faces_in;
 GLOBAL triangle * dev_faces_out;
 GLOBAL triangle * gpu_out_faces;
+GLOBAL float * gpu_out_potential;
 
 void cuda_cpy_input_data();
 void cuda_cpy_output_data();
 void cudacall_icosphere_naive(int);
 void cudacall_icosphere(int);
+void cudacall_gravitational(int);
+
 
 void free_gpu_memory();
 #endif

@@ -22,10 +22,12 @@ using std::string;
 #endif
 
 #define	PI			3.1415926f
-#define R_eq    	6378.1363
-#define mhu 		398600 			// in km^3/s^2
+#define R_eq    	1
+#define mhu 		1 // in km^3/s^2
 #define ICOSPHERE_INIT_FACE_LEN		20
+
 #define N_SPHERICAL 				20
+#define N_coeff (N_SPHERICAL+1)*(N_SPHERICAL+2)/2
 
 struct vertex
 {

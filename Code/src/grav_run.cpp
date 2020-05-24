@@ -123,25 +123,48 @@ float time_profile_gpu(int thread_num, bool verbose){
     }
 
     // COMPUTING GRAVITATIONAL POTENTIAL
-//    START_TIMER();
-//        cudacall_gravitational(thread_num);
-//    STOP_RECORD_TIMER(gpu_time_gravitational);
+    START_TIMER();
+        cudacall_gravitational(thread_num);
+    STOP_RECORD_TIMER(gpu_time_gravitational);
 
 	START_TIMER();
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
 
+
 	if(verbose){
 		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
 	    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
 	    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
+		printf("GPU potential calculation: %f ms\n", gpu_time_gravitational);
 		printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
 	}
 
-	gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy;
+	gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy + gpu_time_gravitational;
 
 	return gpu_time_ms;
+}
+
+void verify_gpu_potential(bool verbose){
+
+	float* gpu_potential = gpu_out_potential;
+
+	bool success = true;
+    for (unsigned int i=0; i<vertices_length; i++){
+        if (fabs(gpu_potential[i] - potential[i]) >= epsilon){
+            success = false;
+            cerr << "Incorrect potential calculation at " << i << " Vertex: "<< gpu_potential[i]<< ", " << potential[i] << endl;
+        }
+    }
+
+    if(success){
+    	if(verbose)
+        	cout << "--------Successful output--------" << endl;
+    }
+    else{
+    	cout << "******** Unsuccessful output ********" << endl;
+    }
 }
 
 void verify_gpu_output(bool verbose){
@@ -196,8 +219,19 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 		cout << "\n----------Running GPU Code----------\n" << endl;
 	float gpu_time = time_profile_gpu(thread_num, verbose);
 	if(verbose)
-		cout << "\n----------Verifying GPU Output----------\n" << endl;
+		cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
 	verify_gpu_output(verbose);
+	if(verbose)
+		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
+	verify_gpu_potential(verbose);
+
+//    for (int i=0; i<N_SPHERICAL; i++)
+//        cout<<coeff[i][i]<<'\n';
+//
+//	for (int i=0; i<vertices_length; i++)
+//    {
+//        cout<<potential[i]<<'\n';
+//    }
 
 	if(verbose){
 		cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;

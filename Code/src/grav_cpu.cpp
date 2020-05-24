@@ -53,7 +53,6 @@ void init_vars(unsigned int depth, float r){
 	epsilon = 1e-6;
 	max_depth = depth;
 	radius = r;
-
 	// Get coefficients for the Potential function calculations
 	get_coefficients();
 }
@@ -422,11 +421,21 @@ float spherical_harmonics(vertex R_vec){
     float y0 = R_eq*R_vec.y/Radius_sq;
     float z0 = R_eq*R_vec.z/Radius_sq;
 
+//    cout<<"\n Print x y z \t"<<x0<<'\t'<<y0<<'\t'<<z0;
+
     //Initialize Intermediary Matrices
     float V[N_SPHERICAL+1][N_SPHERICAL+1];
     float W[N_SPHERICAL+1][N_SPHERICAL+1];
 
+    for (int m=0; m<N_SPHERICAL+1; m++){
+        for (int n = m; n<N_SPHERICAL+1; n++){
+            V[n][m] = 0.0;
+            W[n][m] = 0.0;
+        }
+    }
+
     // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
+//    cout<<"\m Print radius\t"<< radius<<'\t'<<Radius_sq;
     V[0][0] = R_eq /sqrt(Radius_sq);
     W[0][0] = 0.0;
 
@@ -457,11 +466,19 @@ float spherical_harmonics(vertex R_vec){
         }
     }
 
+    for (int m=0; m<N_SPHERICAL+1; m++){
+        for (int n = m; n<N_SPHERICAL+1; n++){
+//            cout<<"\n V[n][m] \t"<< n<<'\t'<<m<<'\t'<<V[n][m]<<'\t' <<W[n][m];
+        }
+    }
+
+
     // Calculate potential
     float C = 0; // Cnm coeff
     float S = 0; // Snm coeff
     float N = 0; // normalisation number
     float U = 0; //potential
+    float p = 0;
     for (int m=0; m<N_SPHERICAL+1; m++){
         for (int n = m; n<N_SPHERICAL+1; n++){
             C = 0;
@@ -472,11 +489,14 @@ float spherical_harmonics(vertex R_vec){
                 U = C*V[n][0];
             }
             else {
-                N = sqrt((2)*(2*n+1)*facprod(n,m));
+                p = facprod(n,m);
+                N = sqrt(2*(2*n+1)*p);
                 C = N*coeff[n][m];
                 S = N*coeff[N_SPHERICAL-n][N_SPHERICAL-m+1];
+//                cout<<"\n Print \t "<<p<<'\t'<<N<<'\t'<<C<<'\t'<<S;
             }
             U = U + C*V[n][m] + S*W[n][m];
+//            cout<<"U in the function  "<<U<<'\t'<<coeff[n][m]<<'\n';
             // Calculation of the Gravitational Potential Calculation model
         }
     }
@@ -497,6 +517,7 @@ void get_grav_pot(){
 
     for (unsigned int i=0; i<vertices_length; i++){
         potential[i] = spherical_harmonics(vertices[i]);
+//        cout<<"Potential \t"<<potential[i];
     }
 }
 
