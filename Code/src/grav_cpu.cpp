@@ -40,7 +40,7 @@ void get_coefficients();
 /*******************************************************************************
  * Function:        init_vars
  *
- * Description:     This function initializes global variables. This should be 
+ * Description:     This function initializes global variables. This should be
  *					the first function to be called from this file.
  *
  * Arguments:       unsigned int depth: The maximum depth of the icosphere
@@ -53,6 +53,7 @@ void init_vars(unsigned int depth, float r){
 	epsilon = 1e-6;
 	max_depth = depth;
 	radius = r;
+	epsilon_pot = 1e-9;
 	// Get coefficients for the Potential function calculations
 	get_coefficients();
 }
@@ -62,7 +63,7 @@ void init_vars(unsigned int depth, float r){
  *
  * Description:     This function dynamically allocate memory for the variables
  *					in the CPU memory. This function should be called only after
- *					"init_vars" function. This should be the second function to 
+ *					"init_vars" function. This should be the second function to
  *					be called from this file.
  *
  * Arguments:       bool verbose: If true then it will prints messages on the c
@@ -92,7 +93,7 @@ void allocate_cpu_mem(bool verbose){
  *
  * Description:     This function dynamically allocate memory for the variables
  *					in the CPU memory. This function should be called only after
- *					"init_vars" function. This should be the second function to 
+ *					"init_vars" function. This should be the second function to
  *					be called from this file.
  *
  * Arguments:       bool verbose: If true then it will prints messages on the c
