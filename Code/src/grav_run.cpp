@@ -64,17 +64,12 @@ float time_profile_cpu(){
 	START_TIMER();
 		create_icoshpere2();
 	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
-	
+
 	START_TIMER();
 		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
-	
-	// START_TIMER();
-		// quickSort((void *)vertices_sph, 0, vertices_length-1, partition_theta);
-	// STOP_RECORD_TIMER(cpu_time_sort_ms);
-    
-    START_TIMER();
-    	// fill_common_theta();
+
+	START_TIMER();
     	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
     cpu_time_ms = cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_sort_ms + cpu_time_grav_pot_ms;
@@ -86,18 +81,19 @@ float time_profile_cpu(){
 	return cpu_time_ms;
 }
 
-
 // this function should be called only after calling time_profile_cpu
 float time_profile_gpu(int thread_num){
 	float gpu_time_ms = 0;
 	float gpu_time_icosphere = -1, gpu_time_icosphere2 =-1;
 	float gpu_time_indata_cpy = -1;
 	float gpu_time_outdata_cpy = -1;
-	
+	float gpu_time_gravitational = -1;
+
+
 	START_TIMER();
 		cuda_cpy_input_data();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
-	
+
 	START_TIMER();
 		cudacall_icosphere_naive(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere);
@@ -123,15 +119,20 @@ float time_profile_gpu(int thread_num){
             cerr << "No kernel error detected" << endl;
     }
 
+    // COMPUTING GRAVITATIONAL POTENTIAL
+//    START_TIMER();
+//        cudacall_gravitational(thread_num);
+//    STOP_RECORD_TIMER(gpu_time_gravitational);
+
 	START_TIMER();
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
-	
+
 	printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
     printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
     printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
 	printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
-	
+
 	gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy;
 
 	return gpu_time_ms;
@@ -168,13 +169,14 @@ void verify_gpu_output(){
 }
 
 int main(int argc, char **argv) {
-	
+
 	// TA_Utilities::select_coldest_GPU();
-	
+
 	if(check_args(argc, argv))
 		return 1;
 
 	int depth = atoi(argv[1]);
+//	N_SPHERICAL = atoi(argv[2]);
 	int thread_num = atoi(argv[2]);
 	cout << "\nThread per block:"<< thread_num << endl;
 
@@ -182,7 +184,7 @@ int main(int argc, char **argv) {
 	allocate_cpu_mem();
 	init_icosphere();
 
-	
+
 	cout << "\n----------Running CPU Code----------\n" << endl;
 	float cpu_time = time_profile_cpu();
 	cout << "\n----------Running GPU Code----------\n" << endl;
@@ -200,7 +202,7 @@ int main(int argc, char **argv) {
 	float ang = acosf((faces[0].v[0].x*faces[0].v[1].x + faces[0].v[0].y*faces[0].v[1].y + faces[0].v[0].z*faces[0].v[1].z)/(norm1*norm0));
 	float dis = radius*ang;
 	cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
-	
+
 	// export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
 	// export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
 	free_cpu_memory();

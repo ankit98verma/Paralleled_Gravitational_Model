@@ -24,12 +24,6 @@
 
 using namespace std;
 
-#define	PI			3.1415926f
-#define R_eq    6378.1363
-#define mhu 398600 // in km^3/s^2
-#define N_SPHERICAL 20
-#define N_N (N_SPHERICAL+1)*(N_SPHERICAL+2)/2
-
 
 /*Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 float const H_ANG = PI/180*72;
@@ -41,22 +35,23 @@ class path;
 triangle * faces_copy;
 
 int partition_sum(void * arr, int low, int high);
+void get_coefficients();
 
 void init_vars(unsigned int depth, float r){
 	epsilon = 1e-6;
 	max_depth = depth;
 	radius = r;
+
+	// Get coefficients for the Potential function calculations
+	get_coefficients();
 }
 
 void allocate_cpu_mem(){
-	faces_length = 20*pow(4, max_depth);
+    faces_length = 20*pow(4, max_depth);
 	vertices_length = faces_length/2 + 2;
 	vertices = (vertex *)malloc(vertices_length*sizeof(vertex));
 	vertices_sph = (point_sph *)malloc(vertices_length*sizeof(point_sph));
-	common_thetas_count = (int *)malloc(vertices_length*sizeof(int));
-	common_thetas_length = 0;
 	potential = (float*) malloc(vertices_length*sizeof(float));
-
 	curr_faces_count = 0;
 	faces = (triangle *)malloc(faces_length*sizeof(triangle));
 	faces_copy = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -329,29 +324,6 @@ void fill_vertices(){
 	memcpy(faces, faces_copy, faces_length*sizeof(triangle));
 }
 
-int partition_theta(void * arr_in, int low, int high){
-	point_sph * arr = (point_sph *)arr_in;
-
-    point_sph pivot = arr[high]; // pivot
-    int i = (low - 1); // Index of smaller element
-  	point_sph tmp;
-    for (int j = low; j <= high - 1; j++)
-    {
-        // If current element is smaller than the pivot
-        if (arr[j].theta < pivot.theta)
-        {
-            i++; // increment index of smaller element
-            tmp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = tmp;
-        }
-    }
-    tmp = arr[high];
-    arr[high] = arr[i+1];
-    arr[i+1] = tmp;
-    return (i + 1);
-}
-
 int partition_sum(void * arr_in, int low, int high){
 	vertex * arr = (vertex *)arr_in;
     vertex pivot = arr[high]; // pivot
@@ -376,8 +348,7 @@ int partition_sum(void * arr_in, int low, int high){
     return (i + 1);
 }
 
-void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int))
-{
+void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int)){
 	if(low < high){
 		/* pi is partitioning index, arr[p] is now
 	    at right place */
@@ -391,18 +362,6 @@ void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int
 
 }
 
-void fill_common_theta(){
-	float prev = vertices_sph[0].theta;
-	common_thetas_count[common_thetas_length]++;
-	for(unsigned int i=1; i<vertices_length; i++){
-		if(fabs(prev - vertices_sph[i].theta) > epsilon){
-			common_thetas_length++;
-			prev = vertices_sph[i].theta;
-		}
-		common_thetas_count[common_thetas_length]++;
-	}
-}
-
 float facprod(int n, int m){
     float p = 1.0;
 
@@ -412,69 +371,77 @@ float facprod(int n, int m){
     return p;
 }
 
-void get_coefficients(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2]){
+void get_coefficients(){
+
+    // Read the file from GRAVITY_MODEL
     ifstream file("utilities/GRAVITY_MODEL.txt");
+
+    // Pseudo data_definition
+    int N_N = (N_SPHERICAL+1)*(N_SPHERICAL+2)/2;
     float data[N_N][4];
-	string line;int row=0;
+
+    // Read data from the file
+	string line;
+	int row=0;
     while (!file.eof())
     {
-    	
+
         getline(file, line);
         stringstream iss(line);
         for (int col = 0; col < 4; ++col)
         {
             iss >> data[row][col];
-            cout << data[row][col] << "\t";
+//            cout << data[row][col] << "\t";
         }
-        cout << "\n";
         row++;
     }
 
+    // Systematically store the data in
+    // coeff[N_SPHERICAL+1][N_SPHERICAL+2] matrix
     int k=0;
+    // Store the Cnm coefficients
     for (int i=0; i<N_SPHERICAL+1; i++)
         for (int j=0; j<=i; j++)
         {
-            coeff[i][j] = data[0][k];
+            coeff[i][j] = data[k][2];
             k++;
         }
 
     k=0;
+    // Store the Snm coefficients
     for (int i = N_SPHERICAL; i>=0; i--)
         for (int j=N_SPHERICAL+1; j>i; j--)
         {
-            coeff[i][j] = data[1][k];
+            coeff[i][j] = data[k][3];
             k++;
         }
-
 //    for (int row=0; row<2; row++){
 //        for (int col=0; col<((N_SPHERICAL+1)*(N_SPHERICAL+2))/2; col++)
 //            cout<<data[row][col]<<'\t';
 //        cout<<"\n \n \n";
 //
 //    }
-//
+
 //    for (int i=0; i<N_SPHERICAL +1; i++){
 //        cout<<"\n \n";
 //        for (int j=0; j<N_SPHERICAL+2; j++)
 //            cout<<coeff[i][j]<<'\t';
 //    }
-
     file.close();
 }
 
 //[
 //References:
 //1. O. Montenbruck, and E. Gill, _Satellite Orbits: Models, Methods and Applications_, 2012, p.56-68.
-float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R_vec ){
-    //R_vec ==  cartesian coordinate vector
-//    float Radius = vertices_sph[0].r; // The altitude is fixed throughout for all the points on the sphere
-    // float Radius = sqrt(pow(R_vec[0],2) + pow(R_vec[1],2) + pow(R_vec[2],2)); // The altitude is fixed throughout for all the points on the sphere
+float spherical_harmonics(vertex R_vec){
+
+    // Define pseudo coefficients
     float Radius_sq = pow(radius,2);
     float rho = pow(R_eq,2)/Radius_sq;
 
-    float x0 = R_eq*R_vec[0]/Radius_sq;
-    float y0 = R_eq*R_vec[1]/Radius_sq;
-    float z0 = R_eq*R_vec[2]/Radius_sq;
+    float x0 = R_eq*R_vec.x/Radius_sq;
+    float y0 = R_eq*R_vec.y/Radius_sq;
+    float z0 = R_eq*R_vec.z/Radius_sq;
 
     //Initialize Intermediary Matrices
     float V[N_SPHERICAL+1][N_SPHERICAL+1];
@@ -488,7 +455,7 @@ float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R
     W[1][0] = 0.0;
 
     for (int n=2; n<N_SPHERICAL+1; n++){
-        V[n][0] = ((2*n-1)*z0*V[n-1][0] - (n-1)*rho*V[n-2][0+1])/n;
+        V[n][0] = ((2*n-1)*z0*V[n-1][0] - (n-1)*rho*V[n-2][0])/n;
         W[n][0] = 0.0;
     } // Eqn 3.30
 
@@ -500,7 +467,7 @@ float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R
         W[m][m] = (2*m-1)*(x0*W[m-1][m-1] + y0*V[m-1][m-1]);
 
         // n=m+1 (only one term)
-        if (m <= N_SPHERICAL){
+        if (m < N_SPHERICAL){
             V[m+1][m] = (2*m+1)*z0*V[m][m];
             W[m+1][m] = (2*m+1)*z0*W[m][m];
         }
@@ -531,6 +498,7 @@ float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R
                 S = N*coeff[N_SPHERICAL-n][N_SPHERICAL-m+1];
             }
             U = U + C*V[n][m] + S*W[n][m];
+            // Calculation of the Gravitational Potential Calculation model
         }
     }
     U = U*mhu/R_eq;
@@ -542,28 +510,14 @@ float spherical_harmonics(float (&coeff)[N_SPHERICAL+1][N_SPHERICAL+2], float* R
 
 void get_grav_pot(){
 
-    float coeff[N_SPHERICAL+1][N_SPHERICAL+2];
-
-    for (int i=0; i<N_SPHERICAL +1; i++){
-        for (int j=0; j<N_SPHERICAL+2; j++)
-            coeff[i][j]=0;
-    }
-    get_coefficients(coeff);
-
 //    for (int i=0; i<N_SPHERICAL +1; i++){
 //        cout<<"\n \n";
 //        for (int j=0; j<N_SPHERICAL+2; j++)
 //            cout<<coeff[i][j]<<'\t';
 //    }
 
-    float R_vec[3];
-
     for (unsigned int i=0; i<vertices_length; i++){
-        R_vec[0] = vertices[i].x;
-        R_vec[1] = vertices[i].y;
-        R_vec[2] = vertices[i].z;
-
-        potential[i] = spherical_harmonics(coeff, R_vec);
+        potential[i] = spherical_harmonics(vertices[i]);
     }
 }
 
@@ -573,8 +527,6 @@ void free_cpu_memory(){
 	free(vertices);
 	free(vertices_sph);
 	free(potential);
-	free(cumulative_common_theta_count);
-	free(common_thetas_count);
 }
 
 
