@@ -198,6 +198,19 @@ void verify_gpu_output(bool verbose){
     }
 }
 
+void output_potential(){
+
+    std::ofstream f;
+//    cout<<"Entering output_file";
+    f.open("output_potential.mat", std::ios::out);
+
+    for (int i=0; i<vertices_length; i++){
+        f<<i<<'\t'<<vertices[i].x<<'\t'<<vertices[i].y<<'\t'<<vertices[i].z<<'\t'<<potential[i]<<'\n';
+    }
+//    cout<<"Exiting output_file";
+    f.close();
+}
+
 void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 
 //	N_SPHERICAL = atoi(argv[2]);
@@ -239,10 +252,14 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	if(verbose)
 		cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 
+    output_potential();
+
 	// export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
 	// export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
 	free_cpu_memory();
 	free_gpu_memory();
+
+
 }
 
 int main(int argc, char **argv) {
