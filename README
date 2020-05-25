@@ -10,7 +10,7 @@ Geopotential for homogenous spheres can be calculated from Newton's law of unive
 
 --------------------------------------------------------------------------------
 Aim:
-The aim of this project is to implement the calculation of the gravitational map of the Earth in a given space and generate a heat map of the space demonstrating the contributions of higher order terms to the gravitational potential.
+The aim of this project is to implement the calculation of the gravitational potential map of the Earth in a given space and generate a heat map of the space demonstrating the contributions of higher order terms to the gravitational potential.
 
 --------------------------------------------------------------------------------
 OverView of Algorithms:
@@ -44,6 +44,9 @@ GRAVITY_MODEL.txt --> contains the coefficients of spherical harmonics
 --------------------------------------------------------------------------------------
 Instructions on how to run smaller components of the project (In addition to demo script) (2.5)
 Provide code output when run on Titan, especially if it takes a while to run.
+
+
+
  
 
 --------------------------------------------------------------------------------
