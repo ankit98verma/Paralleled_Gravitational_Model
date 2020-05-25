@@ -34,7 +34,7 @@ triangle * faces_copy;
 
 
 /* Decleration of local functions */
-int partition_sum(void * arr, int low, int high);
+// int partition_sum(void * arr, int low, int high);
 void get_coefficients();
 
 /*******************************************************************************

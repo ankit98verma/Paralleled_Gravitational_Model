@@ -45,6 +45,8 @@ typedef struct triangle triangle;
 
 /**** Variables related to Icosphere ****/
 
+int partition_sum(void * arr, int low, int high);
+
 // faces of the icosphere
 GLOBAL triangle * faces;
 GLOBAL triangle faces_init[ICOSPHERE_INIT_FACE_LEN];

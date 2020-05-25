@@ -167,22 +167,20 @@ void kernal_sort_faces(vertex * vertices, const unsigned int vertices_length, in
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
-    vertex tmp, tmp1, min_v, max_v;
+    vertex min_v, max_v;
     float sum_i, sum_i1;
 	while(idx+1 < vertices_length){
         
         if((iter+idx)%2==0){
-            tmp = vertices[idx];
-            tmp1 = vertices[idx+1];
             
-            sum_i = tmp.x+tmp.y+tmp.z;
-            sum_i1 = tmp1.x+tmp1.y+tmp1.z;
+            sum_i = vertices[idx].x+vertices[idx].y+vertices[idx].z;
+            sum_i1 = vertices[idx+1].x+vertices[idx+1].y+vertices[idx+1].z;
             if(sum_i < sum_i1){
-                min_v = tmp;
-                max_v = tmp1;
+                min_v = vertices[idx];
+                max_v = vertices[idx+1];
             }else{
-                min_v = tmp1;
-                max_v = tmp;
+                min_v = vertices[idx+1];
+                max_v = vertices[idx];
             }
             // even iter , even thread works
             vertices[idx] = min_v;
@@ -195,11 +193,10 @@ void kernal_sort_faces(vertex * vertices, const unsigned int vertices_length, in
 void cudacall_sort(int thread_num) {
 
     // each thread creates a sub triangle
-    int n_blocks;
-    int len = vertices_length;
-    for(int i=0; i<max_depth; i++){
-        n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-        kernal_sort_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2], vertices_length, i);
+    int len = 3*faces_length;
+    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+    for(int i=0; i<len; i++){
+        kernal_sort_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2], len, i);
     }
 
 }

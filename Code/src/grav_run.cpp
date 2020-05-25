@@ -221,6 +221,25 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	if(verbose)
 		cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
 	verify_gpu_output(verbose);
+
+	/************************** TMP *****************************/
+	if(verbose)
+		cout << "\n----------Verifying Sorted GPU Icosphere----------\n" << endl;
+	quickSort((void *)faces, 0, 3*faces_length-1, partition_sum);
+	
+	cudacall_sort(thread_num);
+	cudaError err = cudaGetLastError();
+    if (cudaSuccess != err){
+        cerr << "Error " << cudaGetErrorString(err) << endl;
+    }else{
+    	if(verbose)
+        	cerr << "No kernel error detected" << endl;
+    }
+    cuda_cpy_output_data();
+    
+    verify_gpu_output(verbose);
+	
+
 	if(verbose)
 		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
 	// verify_gpu_potential(verbose);

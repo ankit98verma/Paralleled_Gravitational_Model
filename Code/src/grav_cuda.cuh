@@ -27,6 +27,7 @@ void cuda_cpy_input_data();
 void cuda_cpy_output_data();
 void cudacall_icosphere_naive(int);
 void cudacall_icosphere(int);
+void cudacall_sort(int);
 void cudacall_gravitational(int);
 
 
