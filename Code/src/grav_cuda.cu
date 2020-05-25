@@ -321,6 +321,7 @@ void cuda_cpy_input_data(){
 	CUDA_CALL(cudaMalloc((void **)&dev_faces_out, faces_length * sizeof(triangle)));
 	CUDA_CALL(cudaMemcpy(dev_faces_in, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
 
+    ind2 = 0;
 	pointers[0] = dev_faces_in;
 	pointers[1] = dev_faces_out;
 

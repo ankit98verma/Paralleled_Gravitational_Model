@@ -223,7 +223,7 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	verify_gpu_output(verbose);
 	if(verbose)
 		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
-	verify_gpu_potential(verbose);
+	// verify_gpu_potential(verbose);
 
 	if(verbose){
 		cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;

@@ -180,6 +180,7 @@ void init_icosphere(){
 		c++;
 	}
 	curr_faces_count = c;
+	
 }
 
 void get_midpoints(triangle tmp, triangle * tri){
@@ -198,7 +199,8 @@ void get_midpoints(triangle tmp, triangle * tri){
 void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
-
+	memcpy(faces_copy, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
+	
 	triangle triag_tmp;
 	for(unsigned int j=1; j<=max_depth; j++){
 
