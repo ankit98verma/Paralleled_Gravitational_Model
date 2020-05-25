@@ -1,1 +1,59 @@
-TODO
+CS 179: GPU Computing
+Project: Generating the Geopotential Model 
+Written by: Ankit Verma, Garima Aggarwal
+
+
+--------------------------------------------------------------------------------
+Motivation:
+In geophysics, a geopotential model is the theoretical analysis of measuring and calculating the effects of Earth's gravitational field.
+Geopotential for homogenous spheres can be calculated from Newton's law of universal gravitation. But in reality, Earth is not exactly spherical, mainly because of its rotation around the polar axis that makes its shape slightly oblate. If this shape were perfectly known together with the exact mass density ρ = ρ(x, y, z), geopotential could be evaluated with numerical methods to find a more accurate model for Earth's gravitational field. However, the situation is in fact the opposite. By observing the orbits of spacecraft and the Moon, Earth's gravitational field can be determined quite accurately. This estimated gravitational model from various missions has been combined to produce what is now referred to as the spherical harmonics of the gravitational potential.
+
+--------------------------------------------------------------------------------
+Aim:
+The aim of this project is to implement the calculation of the gravitational potential map of the Earth in a given space and generate a heat map of the space demonstrating the contributions of higher order terms to the gravitational potential.
+
+--------------------------------------------------------------------------------
+OverView of Algorithms:
+
+The project has been divided into two major works:
+
+1. Generating a uniform mesh over a spherical space, using icosahedron shapes 
+2. Calculation of gravitational potential at each node in the generated mesh
+3. Producing a heat-map denoting contribution of specific (/all) terms to gravitational potential.
+
+--------------------------------------------------------------------------------
+GPU OPTIMISATION and specifics
+
+
+
+--------------------------------------------------------------------------------
+CODE STRUCTURE
+SRC--
+grav_run.cpp---> contains the main structure of the code. It runs both the CPU and GPU modules of the code.
+grav_cpu.cpp---> Contains the cpu modules
+grav_cpu.hpp---> Contains the cpu modules declarations and is the header file for grav_cpu.cpp
+grav_cuda.cu---> Contains the gpu modules
+grav_cuda.cuh---> Contains the gpu modules declarations and is the header file for grav_cuda.cu
+
+UTILITIES--
+GRAVITY_MODEL.txt --> contains the coefficients of spherical harmonics
+
+--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------
+Instructions on how to run smaller components of the project (In addition to demo script) (2.5)
+Provide code output when run on Titan, especially if it takes a while to run.
+
+
+
+ 
+
+--------------------------------------------------------------------------------
+Future Work:
+Similar to using the spherical harmonic coefficients for Geopotential model, similar model can be generated for other known bodies in space, like asteroids, whose geopotential model would be interesting to study in the field of astrodynamics.
+We can also compute the gravitational acceleration just like gravitational potential which can be used in integrators for trajectory design.
+
+--------------------------------------------------------------------------------
+References:
+Satellite Orbits, by Oliver Montebruck
