@@ -383,7 +383,7 @@ int main(int argc, char **argv) {
 		return 0;
 
 	int len = atoi(argv[1]);
-	if (len > 10){
+	if (len >= 10){
 		cout << "It is recommend to give depth < 10. For the depth 9 alone CPU takes around 60 seconds!" << endl;
 		cout << "Exiting the code" << endl;
 		return 0;
