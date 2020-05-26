@@ -43,6 +43,17 @@ cudaEvent_t stop;
       CUDA_CALL(cudaEventDestroy(stop));                    \
     }
 
+
+/*******************************************************************************
+ * Function:        chech_args
+ *
+ * Description:     Checks for the user inputs arguments to run the file
+ *
+ * Arguments:       int argc, char argv
+ *
+ * Return Values:   0
+*******************************************************************************/
+
 int check_args(int argc, char **argv){
 	if (argc != 3){
         printf("Usage: ./grav [depth] [thread_per_block] \n");
@@ -51,6 +62,18 @@ int check_args(int argc, char **argv){
     return 0;
 }
 
+
+
+/*******************************************************************************
+ * Function:        time_profile_cpu
+ *
+ * Description:     RUNS the CPU code
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   CPU computational time
+*******************************************************************************/
 float time_profile_cpu(bool verbose){
 	float cpu_time_ms = 0;
 	float cpu_time_icosphere_ms = 0;
@@ -79,7 +102,17 @@ float time_profile_cpu(bool verbose){
 	return cpu_time_ms;
 }
 
-// this function should be called only after calling time_profile_cpu
+
+/*******************************************************************************
+ * Function:        time_profile_gpu
+ *
+ * Description:     RUNS the GPU code
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   GPU computational time
+*******************************************************************************/
 float time_profile_gpu(int thread_num, bool verbose){
 	float gpu_time_ms = 0;
 	float gpu_time_icosphere = -1, gpu_time_icosphere2 =-1;
@@ -128,8 +161,6 @@ float time_profile_gpu(int thread_num, bool verbose){
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
-
-
 	if(verbose){
 		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
 	    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
@@ -143,6 +174,19 @@ float time_profile_gpu(int thread_num, bool verbose){
 	return gpu_time_ms;
 }
 
+
+
+/*******************************************************************************
+ * Function:        verify_gpu_potential
+ *
+ * Description:     Computes the difference between the CPU potential and GPU
+ *                  potential
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   none
+*******************************************************************************/
 void verify_gpu_potential(bool verbose){
 
 	float* gpu_potential = gpu_out_potential;
@@ -154,7 +198,6 @@ void verify_gpu_potential(bool verbose){
             cerr << "Incorrect potential calculation at " << i << " Vertex: "<< gpu_potential[i]<< ", " << potential[i] << endl;
         }
     }
-
     if(success){
     	if(verbose)
         	cout << "--------Successful output--------" << endl;
@@ -164,6 +207,18 @@ void verify_gpu_potential(bool verbose){
     }
 }
 
+
+
+/*******************************************************************************
+ * Function:        verify_gpu_output
+ *
+ * Description:     Computes the difference between the CPU and GPU vertices
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   none
+*******************************************************************************/
 void verify_gpu_output(bool verbose){
 
 	vertex * v = (vertex *)faces;
@@ -195,6 +250,17 @@ void verify_gpu_output(bool verbose){
     }
 }
 
+/*******************************************************************************
+ * Function:        output_potential
+ *
+ * Description:     Stores the vertices and corresponding potential in a MATLAB
+ *                  compatible .mat file
+ *
+ * Arguments:       bool verbose: If true message will be printed else not.
+ *
+ * Return Values:   none
+*******************************************************************************/
+
 void output_potential(bool verbose){
 	if(verbose)
    		cout<<"Exporting: results/output_potential.mat" << endl;
@@ -208,7 +274,22 @@ void output_potential(bool verbose){
     f.close();
 }
 
-void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
+
+/*******************************************************************************
+ * Function:        run
+ *
+ * Description:     Stores the vertices and corresponding potential in a MATLAB
+ *                  compatible .mat file
+ *
+ * Arguments:       int depth - needed for icosphere calculation
+ *                  int thread_num - number of threads per block
+ *                  float radius - radius of the sphere
+ *                  bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   none
+*******************************************************************************/
+void run(int depth, int thread_num, float radius, bool verbose){
 
 //	N_SPHERICAL = atoi(argv[2]);
 	if(thread_num > 1024){
@@ -217,7 +298,7 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	if(verbose)
 		cout << "\nThread per block:"<< thread_num << endl;
 
-	init_vars(depth, 1);
+	init_vars(depth, radius);
 	allocate_cpu_mem(verbose);
 	init_icosphere();
 
@@ -277,6 +358,15 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 
 }
 
+/*******************************************************************************
+ * Function:        main
+ *
+ * Description:     Run the main function
+ *
+ * Arguments:       int argc, char argv
+ *
+ * Return Values:   int 1 if code executes successfully else 0.
+*******************************************************************************/
 int main(int argc, char **argv) {
 
 	// TA_Utilities::select_coldest_GPU();

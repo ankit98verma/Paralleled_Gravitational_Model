@@ -344,8 +344,21 @@ void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int
 
 }
 
+/*******************************************************************************
+ * Function:        facprod
+ *
+ * Description:     computes (n+m)!/(n-m)!
+ *
+ * Arguments:       int n, int m- from geoppotential coefficients
+ *
+ * Return Values:   float p = (n+m)!/(n-m)!
+ *
+ * References:      O. Montenbruck, and E. Gill, _Satellite Orbits: Models,
+                    Methods and Applications_, 2012, p.56-68.
+ *
+*******************************************************************************/
 float facprod(int n, int m){
-    float p = 1.0;
+    float p = 1.0; // initialisation of p
 
     for (int i = n-m+1; i<=n+m; i++)
         p = p/i;
@@ -353,6 +366,21 @@ float facprod(int n, int m){
     return p;
 }
 
+
+
+/*******************************************************************************
+ * Function:        get_coefficients
+ *
+ * Description:     Gets the geopotential coefficients from the GRAVITY_MODEL.txt
+ *
+ * Arguments:       none
+ *
+ * Return Values:   none
+ *
+ * References:      O. Montenbruck, and E. Gill, _Satellite Orbits: Models,
+                    Methods and Applications_, 2012, p.56-68.
+ *
+*******************************************************************************/
 void get_coefficients(){
 
     // Read the file from GRAVITY_MODEL
@@ -373,7 +401,6 @@ void get_coefficients(){
         for (int col = 0; col < 4; ++col)
         {
             iss >> data[row][col];
-//            cout << data[row][col] << "\t";
         }
         row++;
     }
@@ -397,24 +424,25 @@ void get_coefficients(){
             coeff[i][j] = data[k][3];
             k++;
         }
-//    for (int row=0; row<2; row++){
-//        for (int col=0; col<((N_SPHERICAL+1)*(N_SPHERICAL+2))/2; col++)
-//            cout<<data[row][col]<<'\t';
-//        cout<<"\n \n \n";
-//
-//    }
-
-//    for (int i=0; i<N_SPHERICAL +1; i++){
-//        cout<<"\n \n";
-//        for (int j=0; j<N_SPHERICAL+2; j++)
-//            cout<<coeff[i][j]<<'\t';
-//    }
     file.close();
 }
 
-//[
-//References:
-//1. O. Montenbruck, and E. Gill, _Satellite Orbits: Models, Methods and Applications_, 2012, p.56-68.
+
+
+/*******************************************************************************
+ * Function:        spherical_harmonics
+ *
+ * Description:     This function calculates the geopotential value at specific
+                    locations on the spherical model
+ *
+ * Arguments:       vertex R_vec ==  vertex on the sphere. has information on x,y,z
+ *
+ * Return Values:   float U == potential value
+ *
+ * References:      O. Montenbruck, and E. Gill, _Satellite Orbits: Models,
+                    Methods and Applications_, 2012, p.56-68.
+ *
+*******************************************************************************/
 float spherical_harmonics(vertex R_vec){
 
     // Define pseudo coefficients
@@ -424,8 +452,6 @@ float spherical_harmonics(vertex R_vec){
     float x0 = R_eq*R_vec.x/Radius_sq;
     float y0 = R_eq*R_vec.y/Radius_sq;
     float z0 = R_eq*R_vec.z/Radius_sq;
-
-//    cout<<"\n Print x y z \t"<<x0<<'\t'<<y0<<'\t'<<z0;
 
     //Initialize Intermediary Matrices
     float V[N_SPHERICAL+1][N_SPHERICAL+1];
@@ -439,7 +465,6 @@ float spherical_harmonics(vertex R_vec){
     }
 
     // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
-//    cout<<"\m Print radius\t"<< radius<<'\t'<<Radius_sq;
     V[0][0] = R_eq /sqrt(Radius_sq);
     W[0][0] = 0.0;
 
@@ -472,7 +497,6 @@ float spherical_harmonics(vertex R_vec){
 
     for (int m=0; m<N_SPHERICAL+1; m++){
         for (int n = m; n<N_SPHERICAL+1; n++){
-//            cout<<"\n V[n][m] \t"<< n<<'\t'<<m<<'\t'<<V[n][m]<<'\t' <<W[n][m];
         }
     }
 
@@ -497,35 +521,40 @@ float spherical_harmonics(vertex R_vec){
                 N = sqrt(2*(2*n+1)*p);
                 C = N*coeff[n][m];
                 S = N*coeff[N_SPHERICAL-n][N_SPHERICAL-m+1];
-//                cout<<"\n Print \t "<<p<<'\t'<<N<<'\t'<<C<<'\t'<<S;
             }
             U = U + C*V[n][m] + S*W[n][m];
-//            cout<<"U in the function  "<<U<<'\t'<<coeff[n][m]<<'\n';
             // Calculation of the Gravitational Potential Calculation model
         }
     }
     U = U*mhu/R_eq;
-//    cout<<"U in the function  "<<U<<'\n';
-
     return U;
 }
-//]
+
+
+
+/*******************************************************************************
+ * Function:        get_grav_pot
+ *
+ * Description:     This function calculates the geopotential value at all
+                    locations on the spherical model
+ *
+ * Arguments:       none
+ *
+ * Return Values:   none
+ *
+*******************************************************************************/
 
 void get_grav_pot(){
-
-//    for (int i=0; i<N_SPHERICAL +1; i++){
-//        cout<<"\n \n";
-//        for (int j=0; j<N_SPHERICAL+2; j++)
-//            cout<<coeff[i][j]<<'\t';
-//    }
-
     for (unsigned int i=0; i<vertices_length; i++){
         potential[i] = spherical_harmonics(vertices[i]);
-//        cout<<"Potential \t"<<potential[i];
     }
 }
 
+
+
 void free_cpu_memory(){
+
+    // Free malloc arrays
 	free(faces);
 	free(faces_copy);
 	free(vertices);
