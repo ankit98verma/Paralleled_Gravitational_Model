@@ -85,8 +85,9 @@ Instructions on how to run the CPU demo
 
 Please follow the following instructions:
 
-1. Build the project by running "make clean all" (without quotes). This would create object files in "bin/" folder and creates an executable file named "grav_run".
-2. Run the code as follows:
+1. Go into the "Code" folder by using "cd Code"
+2. Build the project by running "make clean all" (without quotes). This would create object files in "bin/" folder and creates an executable file named "grav_run".
+3. Run the code as follows:
 	./grav_run <depth of icosphere> <verbose 0/1>
 
 	The code will generate icospheres from depth 0 to the value provided in argument "depth of icosphere". For each depth it will calculate the gravitational potential. (Please check the email sent to you for visualization of gravity potential). If verbose is set to 1 then a detailed messages will be printed else only essential messages will be printed.
