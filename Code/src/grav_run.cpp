@@ -156,6 +156,13 @@ float time_profile_gpu(int thread_num, bool verbose){
     START_TIMER();
         cudacall_gravitational(thread_num);
     STOP_RECORD_TIMER(gpu_time_gravitational);
+    err = cudaGetLastError();
+    if (cudaSuccess != err){
+        cerr << "Error " << cudaGetErrorString(err) << endl;
+    }else{
+    	if(verbose)
+        	cerr << "No kernel error detected" << endl;
+    }
 
 	START_TIMER();
 		cuda_cpy_output_data();
