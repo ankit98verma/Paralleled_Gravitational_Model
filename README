@@ -6,50 +6,97 @@ Written by: Ankit Verma, Garima Aggarwal
 --------------------------------------------------------------------------------
 Motivation:
 In geophysics, a geopotential model is the theoretical analysis of measuring and calculating the effects of Earth's gravitational field.
-Geopotential for homogenous spheres can be calculated from Newton's law of universal gravitation. But in reality, Earth is not exactly spherical, mainly because of its rotation around the polar axis that makes its shape slightly oblate. If this shape were perfectly known together with the exact mass density ρ = ρ(x, y, z), geopotential could be evaluated with numerical methods to find a more accurate model for Earth's gravitational field. However, the situation is in fact the opposite. By observing the orbits of spacecraft and the Moon, Earth's gravitational field can be determined quite accurately. This estimated gravitational model from various missions has been combined to produce what is now referred to as the spherical harmonics of the gravitational potential.
+Geopotential for homogeneous spheres can be calculated from Newton's law of universal gravitation. But in reality, Earth is not exactly spherical, mainly because of its rotation around the polar axis that makes its shape slightly oblate. If this shape were perfectly known together with the exact mass density ρ = ρ(x, y, z), geopotential could be evaluated with numerical methods to find a more accurate model for Earth's gravitational field. However, the situation is in fact the opposite. By observing the orbits of spacecraft and the Moon, Earth's gravitational field can be determined quite accurately. This estimated gravitational model from various missions has been combined to produce what is now referred to as the spherical harmonics of the gravitational potential.
+
+The higher order gravitational potentials play a very important role for objects of irregular shapes like asteroids. The higher order terms of gravitational potential can change the simulated orbit of the spacecraft around the asteroid. Hence a GPU implementation of calculation of gravitational potential would accelerate the design of space missions(especially the mission in which a irregular body is involved).
 
 --------------------------------------------------------------------------------
 Aim:
-The aim of this project is to implement the calculation of the gravitational potential map of the Earth in a given space and generate a heat map of the space demonstrating the contributions of higher order terms to the gravitational potential.
+The aim of this project is to implement the calculation of the gravitational potential map of a celestial body (Earth in our case) in a given space and generate a heat map of the space demonstrating the contributions of higher order terms to the gravitational potential.
 
 --------------------------------------------------------------------------------
-OverView of Algorithms:
+Overview of Project/Algorithms:
 
-The project has been divided into two major works:
+The project is divided into two parts which are as follows:
+1. {Ankit Verma} Generate a set of points uniformly distributed over a sphere of given radius. To perform this task "geodesic polyhedrons" are used. More specially we are using icosahedron to generate a uniformly sampled sphere. An icosahedron is a polygon of equilateral 12 triangles. Following link gives a description of geodesic polyhedrons (including icosahedron): https://en.wikipedia.org/wiki/Geodesic_polyhedron
+	
+A icosphere of depth 0 is nothing but a icosahedron (each vertex of icosahedron is located at given radius from the origin). A icosphere of depth 1 is made as follows:
+	a. Each triangle of the polyhedron (icosahedron) is divided into 4 new triangles by taking a mid point of each edge of the triangle and now each vertex is project on to the radius of the sphere which is being sampled by icosahedron. 
+Similarly a icosphere of depth 2 can be made by taking its faces and performing the above operation on them. We increase the depth of icosphere go to depth 1, 2 ... More the depth of the icosphere more the number of samples of the sphere.
 
-1. Generating a uniform mesh over a spherical space, using icosahedron shapes 
-2. Calculation of gravitational potential at each node in the generated mesh
-3. Producing a heat-map denoting contribution of specific (/all) terms to gravitational potential.
+2. {Garima Aggarwal} Calculation of gravitational potential at the set of points generated. <TODO>
+
+Lastly, producing a heat-map denoting contribution of specific (/all) terms to gravitational potential to visualize the results is 
 
 --------------------------------------------------------------------------------
 GPU OPTIMISATION and specifics
 
-
+<details not provided for CPU demo>
 
 --------------------------------------------------------------------------------
-CODE STRUCTURE
-SRC--
-grav_run.cpp---> contains the main structure of the code. It runs both the CPU and GPU modules of the code.
-grav_cpu.cpp---> Contains the cpu modules
-grav_cpu.hpp---> Contains the cpu modules declarations and is the header file for grav_cpu.cpp
-grav_cuda.cu---> Contains the gpu modules
-grav_cuda.cuh---> Contains the gpu modules declarations and is the header file for grav_cuda.cu
+FILE/CODE STRUCTURE
 
-UTILITIES--
-GRAVITY_MODEL.txt --> contains the coefficients of spherical harmonics
+Following is the file and code structure:
 
---------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------
---------------------------------------------------------------------------------------
-Instructions on how to run smaller components of the project (In addition to demo script) (2.5)
-Provide code output when run on Titan, especially if it takes a while to run.
+CPU_Demo
+│   README  -> The README file of the project containing the details of the prject and instructions
+└───Code
+    │   grav_run    -> The executable file for CPU demo
+    │   Makefile    -> The make file of the project, usage: make clean all
+    │
+    ├───bin
+    │       cuda.o              -> Cuda object fle
+    │       grav_cpu.cpp.o      -> CPU code object file
+    │       grav_cuda.cu.o      -> Cuda file object
+    │       grav_run.cpp.o      -> CPU demo object file
+    │       ta_utilities.cpp.o  -> TA utitlities object file
+    │
+    ├───resources
+    │       EGM_jared_20.txt            -> Refrence data (un-used at the moment)
+    │       EGM_jared_20_only_data.txt  -> Refrence data (un-used at the moment)
+    │       GRAVITY_MODEL.txt           -> Contains the coefficients of spherical harmonics (used)
+    │       jared_EGM20_model.csv       -> Refrence data (un-used at the moment)
+    │
+    ├───results
+    │       cpu_edges.csv           -> The edeges of icosphere
+    │       heatmap_2.png           -> A 2D heatmap
+    │       heatmap_3.png           -> A 3D heatmap
+    │       output_potential.mat    -> Data containing the geo potentials
+    │       vertices.csv            -> The vertices of icosphere
+    │
+    ├───src
+    │       cuda_calls_helper.h     -> The cuda call helper file
+    │       cuda_header.cuh         -> The cuda header
+    │       grav_cpu.cpp            -> The CPU code of the project
+    │       grav_cpu.hpp            -> Contains the CPU modules declarations and is the header file for grav_cpu.cpp
+    │       grav_cuda.cu            -> The GPU code of the project
+    │       grav_cuda.cuh           -> Contains the GPU modules declarations and is the header file for grav_cuda.cu
+    │       grav_run.cpp            -> The code containing the "main( , )" function. It runs both the CPU and GPU modules of the code.(GPU code has been commented for CPU demo).
+    │       helper_cuda.h           -> Helper file for GPU program
+    │       ta_utilities.cpp        -> The TA's utility functions (unused at the moment)
+    │       ta_utilities.hpp        -> The header file for TA's utility functions (unused at the moment)
+    │
+    └───utilities
+            heat_map.m              -> Matlab file to generate heatmaps
+            visulaize_icosphere.m   -> Matlab file to visualize icosphere
+
+--------------------------------------------------------------------------------
+Instructions on how to run the CPU demo
+
+Please follow the following instructions:
+
+1. Build the project by running "make clean all" (without quotes). This would create object files in "bin/" folder and creates an executable file named "grav_run".
+2. Run the code as follows:
+	./grav_run <depth of icosphere> <verbose 0/1>
+
+	The code will generate icospheres from depth 0 to the value provided in argument "depth of icosphere". For each depth it will calculate the gravitational potential. (Please check the email sent to you for visualization of gravity potential). If verbose is set to 1 then a detailed messages will be printed else only essential messages will be printed.
+
+	The CPU takes quite some time to run the program for more than 9. Hence it is recommended to give value for "depth of icosphere" less than 10. We have provided the output of the code till depth 10 in the next section.
 
 
 --------------------------------------------------------------------------------
 Output:
-Since for large values of depth of icosphere the CPU takes a lot of time to run hence 
-we are providing the results of running the "grav_run" till depth level 10.
+Since for large values of depth of icosphere the CPU takes a lot of time to run hence we are providing the results of running the "grav_run" till depth level 10, which is as follows:
 
 **********************************************************************************
 |  Depth |                        |       CPU time (ms)   |                      |
@@ -67,6 +114,7 @@ we are providing the results of running the "grav_run" till depth level 10.
 |    9   |        58224.5         |        59715.9        |         117940       |
 |    10  |        436761          |        238408         |         675169       |
 **********************************************************************************
+
 As shown above the total time for CPU goes well above 10 mintues for depth 10.
 --------------------------------------------------------------------------------
  
@@ -79,3 +127,4 @@ We can also compute the gravitational acceleration just like gravitational poten
 --------------------------------------------------------------------------------
 References:
 Satellite Orbits, by Oliver Montebruck
+Geodesic polyhedron: https://en.wikipedia.org/wiki/Geodesic_polyhedron
