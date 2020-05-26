@@ -383,11 +383,11 @@ int main(int argc, char **argv) {
 		return 0;
 
 	int len = atoi(argv[1]);
-	// if (len > 10){
-	// 	cout << "It is recommend to give depth < 10. For the depth 9 alone CPU takes around 60 seconds!" << endl;
-	// 	cout << "Exiting the code" << endl;
-	// 	return 0;
-	// }
+	if (len > 10){
+		cout << "It is recommend to give depth < 10. For the depth 9 alone CPU takes around 60 seconds!" << endl;
+		cout << "Exiting the code" << endl;
+		return 0;
+	}
 
 	cout << "Running from depth 0 to depth " << len << " (both inclusive)" << endl;
 	if((bool)atoi(argv[2]))
@@ -425,5 +425,4 @@ int main(int argc, char **argv) {
 
     return 1;
 }
-// \t|\t \t|\tTotal (ms)\t\t|" << endl;
 

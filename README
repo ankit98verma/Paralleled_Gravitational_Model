@@ -22,7 +22,7 @@ The project is divided into two parts which are as follows:
 	
 A icosphere of depth 0 is nothing but a icosahedron (each vertex of icosahedron is located at given radius from the origin). A icosphere of depth 1 is made as follows:
 	a. Each triangle of the polyhedron (icosahedron) is divided into 4 new triangles by taking a mid point of each edge of the triangle and now each vertex is project on to the radius of the sphere which is being sampled by icosahedron. 
-Similarly a icosphere of depth 2 can be made by taking its faces and performing the above operation on them. We increase the depth of icosphere go to depth 1, 2 ... More the depth of the icosphere more the number of samples of the sphere.
+Similarly a icosphere of depth 2 can be made by taking its faces and performing the above operation on them. We increase the depth of icosphere go to depth 1, 2 ... More the depth of the icosphere more the number of samples of the sphere. A icosphere of depth 10 gives more than 10 million points on the sphere!
 
 2. {Garima Aggarwal} Calculation of gravitational potential at the set of points generated. <TODO>
 
