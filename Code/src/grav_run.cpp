@@ -56,7 +56,8 @@ cudaEvent_t stop;
 
 int check_args(int argc, char **argv){
 	if (argc != 3){
-        printf("Usage: ./grav [depth] [thread_per_block] \n");
+        // printf("Usage: ./grav [depth] [thread_per_block] \n");
+        printf("Usage: ./grav [depth] [verbose: 0/1] \n");
         return 1;
     }
     return 0;
@@ -74,8 +75,8 @@ int check_args(int argc, char **argv){
  *
  * Return Values:   CPU computational time
 *******************************************************************************/
-float time_profile_cpu(bool verbose){
-	float cpu_time_ms = 0;
+void time_profile_cpu(bool verbose, float * res){
+	
 	float cpu_time_icosphere_ms = 0;
 	float cpu_time_fill_vertices_ms = 0;
 	float cpu_time_grav_pot_ms = 0;
@@ -91,15 +92,14 @@ float time_profile_cpu(bool verbose){
 	START_TIMER();
     	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
-    cpu_time_ms = cpu_time_icosphere_ms + cpu_time_fill_vertices_ms + cpu_time_grav_pot_ms;
 
     if(verbose){
 	    printf("Icosphere generation time: %f ms\n", cpu_time_icosphere_ms);
 	    printf("Fill vertices time: %f ms\n", cpu_time_fill_vertices_ms);
 		printf("Gravitational potential time: %f ms\n", cpu_time_grav_pot_ms);
     }
-
-	return cpu_time_ms;
+    res[0] = cpu_time_icosphere_ms+cpu_time_fill_vertices_ms;
+    res[1] = cpu_time_grav_pot_ms;
 }
 
 
@@ -113,8 +113,8 @@ float time_profile_cpu(bool verbose){
  *
  * Return Values:   GPU computational time
 *******************************************************************************/
-float time_profile_gpu(int thread_num, bool verbose){
-	float gpu_time_ms = 0;
+void time_profile_gpu(int thread_num, bool verbose, float * res){
+	
 	float gpu_time_icosphere = -1, gpu_time_icosphere2 =-1;
 	float gpu_time_indata_cpy = -1;
 	float gpu_time_outdata_cpy = -1;
@@ -176,9 +176,10 @@ float time_profile_gpu(int thread_num, bool verbose){
 		printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
 	}
 
-	gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy + gpu_time_gravitational;
+	// gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy + gpu_time_gravitational;
 
-	return gpu_time_ms;
+	res[0] = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy;
+	res[1] = gpu_time_gravitational;
 }
 
 
@@ -275,7 +276,7 @@ void output_potential(bool verbose){
     std::ofstream f;
     f.open("results/output_potential.mat", std::ios::out);
 
-    for (int i=0; i<vertices_length; i++){
+    for (unsigned int i=0; i<vertices_length; i++){
         f<<i<<'\t'<<vertices[i].x<<'\t'<<vertices[i].y<<'\t'<<vertices[i].z<<'\t'<<potential[i]<<'\n';
     }
     f.close();
@@ -296,7 +297,7 @@ void output_potential(bool verbose){
  *
  * Return Values:   none
 *******************************************************************************/
-void run(int depth, int thread_num, float radius, bool verbose){
+void run(int depth, int thread_num, float radius, bool verbose, float * cpu_res, float * gpu_res){
 
 //	N_SPHERICAL = atoi(argv[2]);
 	if(thread_num > 1024){
@@ -311,14 +312,14 @@ void run(int depth, int thread_num, float radius, bool verbose){
 
 	if(verbose)
 		cout << "\n----------Running CPU Code----------\n" << endl;
-	float cpu_time = time_profile_cpu(verbose);
+	time_profile_cpu(verbose, cpu_res);
 
-	if(verbose)
-		cout << "\n----------Running GPU Code----------\n" << endl;
-	float gpu_time = time_profile_gpu(thread_num, verbose);
-	if(verbose)
-		cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
-	verify_gpu_output(verbose);
+	// if(verbose)
+	// 	cout << "\n----------Running GPU Code----------\n" << endl;
+	// float gpu_time = time_profile_gpu(thread_num, verbose, gpu_res);
+	// if(verbose)
+	// 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
+	// verify_gpu_output(verbose);
 
 	/************************** TMP *****************************/
 	// if(verbose)
@@ -336,16 +337,16 @@ void run(int depth, int thread_num, float radius, bool verbose){
  //    cuda_cpy_output_data();
     
  //    verify_gpu_output(verbose);
-	
 
-	if(verbose)
-		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
-	verify_gpu_potential(verbose);
+	// if(verbose)
+	// 	cout << "\n----------Verifying GPU Potential ----------\n" << endl;
+	// verify_gpu_potential(verbose);
 
+	float cpu_time = cpu_res[0] +  cpu_res[1];
 	if(verbose){
 		cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;
-		cout << "Time taken by the GPU is: " << gpu_time << " milliseconds" << endl;
-		cout << "Speed up factor: " << cpu_time/gpu_time << "\n" << endl;
+		// cout << "Time taken by the GPU is: " << gpu_time << " milliseconds" << endl;
+		// cout << "Speed up factor: " << cpu_time/gpu_time << "\n" << endl;
 	}
 
 	// calculate the distance b/w two points of icosphere
@@ -356,14 +357,14 @@ void run(int depth, int thread_num, float radius, bool verbose){
 	if(verbose)
 		cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 
-    output_potential(verbose);
-	export_csv(faces, "results/vertices.csv", "results/cpu_edges.csv", verbose);
+    // output_potential(verbose);
+	// export_csv(faces, "results/vertices.csv", "results/cpu_edges.csv", verbose);
 	// export_csv(gpu_out_faces, "results/vertices.csv", "results/gpu_edges.csv", verbose);
 	free_cpu_memory();
-	free_gpu_memory();
-
+	// free_gpu_memory();
 
 }
+
 
 /*******************************************************************************
  * Function:        main
@@ -380,7 +381,34 @@ int main(int argc, char **argv) {
 	if(check_args(argc, argv))
 		return 0;
 
-	run(atoi(argv[1]), atoi(argv[2]), 0, 1, true);
+	int len = atoi(argv[1]);
+	if (len > 10){
+		cout << "It is recommend to give depth <= 10" << endl;
+		cout << "Exiting the code" << endl;
+		return 0;
+	}
+
+	cout << "Running from depth 0 to depth " << len << " (both inclusive)" << endl;
+	if((bool)atoi(argv[2]))
+		cout << "Verbose ON" << endl;
+	else
+		cout << "Verbose OFF" << endl;
+
+	float cpu_times[len][2];
+	
+	float tmp_res[2];
+	for(int i=0; i<=len; i++){
+		run(i, 512, 1, (bool)atoi(argv[2]), cpu_times[i], tmp_res);	
+	}
+
+	// print table
+	cout << "\n----------------------------------------------------------------------------------------------------------------" << endl;
+	cout << "|\tDepth \t | \t Icosphere CPU time (ms){Ankit}\t| \t Potential CPU time (ms){Garima}\t|" << endl;
+	for(int i=0; i<=len; i++){	
+		cout << "|\t"<< i <<" \t | \t "<< cpu_times[i][0] <<" \t\t\t| \t "<< cpu_times[i][1] <<" \t\t\t\t|" << endl;
+	}
+	cout << "----------------------------------------------------------------------------------------------------------------\n" << endl;
+
 
 
     return 1;
