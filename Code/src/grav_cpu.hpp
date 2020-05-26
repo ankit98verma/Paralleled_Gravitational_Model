@@ -81,7 +81,7 @@ void fill_common_theta();
 
 void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int));
 
-void export_csv(triangle * f, string filename1, string filename2, string filename3);
+void export_csv(triangle * f, string filename1, string filename2, bool verbose);
 
 void get_grav_pot();
 

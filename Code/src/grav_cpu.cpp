@@ -245,8 +245,9 @@ void create_icoshpere(){
 	}
 }
 
-void export_csv(triangle * f, string filename1, string filename2){
-	cout << "Exporting: " << filename1 << ", " << filename2 <<endl;
+void export_csv(triangle * f, string filename1, string filename2, bool verbose){
+	if(verbose)
+		cout << "Exporting: " << filename1 << ", " << filename2 <<endl;
 
 	ofstream obj_stream;
 	obj_stream.open(filename1);
@@ -355,7 +356,7 @@ float facprod(int n, int m){
 void get_coefficients(){
 
     // Read the file from GRAVITY_MODEL
-    ifstream file("utilities/GRAVITY_MODEL.txt");
+    ifstream file("resources/GRAVITY_MODEL.txt");
 
     // Pseudo data_definition
     int N_N = (N_SPHERICAL+1)*(N_SPHERICAL+2)/2;

@@ -24,10 +24,7 @@
 #include "grav_cuda.cuh"
 #include "helper_cuda.h"
 
-using std::cerr;
-using std::cout;
-using std::endl;
-
+using namespace std;
 
 // (From Eric's code)
 cudaEvent_t start;
@@ -198,16 +195,16 @@ void verify_gpu_output(bool verbose){
     }
 }
 
-void output_potential(){
-
+void output_potential(bool verbose){
+	if(verbose)
+   		cout<<"Exporting: results/output_potential.mat" << endl;
+    
     std::ofstream f;
-//    cout<<"Entering output_file";
-    f.open("output_potential.mat", std::ios::out);
+    f.open("results/output_potential.mat", std::ios::out);
 
     for (int i=0; i<vertices_length; i++){
         f<<i<<'\t'<<vertices[i].x<<'\t'<<vertices[i].y<<'\t'<<vertices[i].z<<'\t'<<potential[i]<<'\n';
     }
-//    cout<<"Exiting output_file";
     f.close();
 }
 
@@ -236,26 +233,26 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	verify_gpu_output(verbose);
 
 	/************************** TMP *****************************/
-	if(verbose)
-		cout << "\n----------Verifying Sorted GPU Icosphere----------\n" << endl;
-	quickSort((void *)faces, 0, 3*faces_length-1, partition_sum);
+	// if(verbose)
+	// 	cout << "\n----------Verifying Sorted GPU Icosphere----------\n" << endl;
+	// quickSort((void *)faces, 0, 3*faces_length-1, partition_sum);
 	
-	cudacall_sort(thread_num);
-	cudaError err = cudaGetLastError();
-    if (cudaSuccess != err){
-        cerr << "Error " << cudaGetErrorString(err) << endl;
-    }else{
-    	if(verbose)
-        	cerr << "No kernel error detected" << endl;
-    }
-    cuda_cpy_output_data();
+	// cudacall_sort(thread_num);
+	// cudaError err = cudaGetLastError();
+ //    if (cudaSuccess != err){
+ //        cerr << "Error " << cudaGetErrorString(err) << endl;
+ //    }else{
+ //    	if(verbose)
+ //        	cerr << "No kernel error detected" << endl;
+ //    }
+ //    cuda_cpy_output_data();
     
-    verify_gpu_output(verbose);
+ //    verify_gpu_output(verbose);
 	
 
 	if(verbose)
 		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
-	// verify_gpu_potential(verbose);
+	verify_gpu_potential(verbose);
 
 	if(verbose){
 		cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;
@@ -271,10 +268,9 @@ void run(int depth, int thread_num, int n_sph, float radius, bool verbose){
 	if(verbose)
 		cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 
-    output_potential();
-
-	// export_csv(faces, "utilities/vertices.csv", "utilities/cpu_edges.csv", "utilities/vertices_sph.csv");
-	// export_csv(gpu_out_faces, "utilities/vertices.csv", "utilities/gpu_edges.csv", "utilities/vertices_sph.csv");
+    output_potential(verbose);
+	export_csv(faces, "results/vertices.csv", "results/cpu_edges.csv", verbose);
+	// export_csv(gpu_out_faces, "results/vertices.csv", "results/gpu_edges.csv", verbose);
 	free_cpu_memory();
 	free_gpu_memory();
 
