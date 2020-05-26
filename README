@@ -2,7 +2,6 @@ CS 179: GPU Computing
 Project: Generating the Geopotential Model 
 Written by: Ankit Verma, Garima Aggarwal
 
-
 --------------------------------------------------------------------------------
 Motivation:
 In geophysics, a geopotential model is the theoretical analysis of measuring and calculating the effects of Earth's gravitational field.
@@ -24,7 +23,8 @@ A icosphere of depth 0 is nothing but a icosahedron (each vertex of icosahedron 
 	a. Each triangle of the polyhedron (icosahedron) is divided into 4 new triangles by taking a mid point of each edge of the triangle and now each vertex is project on to the radius of the sphere which is being sampled by icosahedron. 
 Similarly a icosphere of depth 2 can be made by taking its faces and performing the above operation on them. We increase the depth of icosphere go to depth 1, 2 ... More the depth of the icosphere more the number of samples of the sphere.
 
-2. {Garima Aggarwal} Calculation of gravitational potential at the set of points generated. <TODO>
+2. {Garima Aggarwal} Calculation of gravitational potential at the set of points generated. 
+The geopotential calculation involves the summation of spherical harmonics. An n-order spherical harmonic would mean a summation of (n+2)*(n+1)/2 terms. The case dealt in this project is when n=20, i.e., every location on the sphere would involve a summation of 231 terms. Hence, as the depth of the icosahedron increases, the number of locations on the sphere increases and so does this calculation. This then becomes time-consuming and hence, requires the need for GPU to produce the gravitational potential model for the entire sphere.
 
 Lastly, producing a heat-map denoting contribution of specific (/all) terms to gravitational potential to visualize the results is 
 
@@ -52,15 +52,15 @@ CPU_Demo
     │       ta_utilities.cpp.o  -> TA utitlities object file
     │
     ├───resources
-    │       EGM_jared_20.txt            -> Refrence data (un-used at the moment)
-    │       EGM_jared_20_only_data.txt  -> Refrence data (un-used at the moment)
+    │       EGM_jared_20.txt            -> Reference data (un-used at the moment)
+    │       EGM_jared_20_only_data.txt  -> Reference data (un-used at the moment)
     │       GRAVITY_MODEL.txt           -> Contains the coefficients of spherical harmonics (used)
-    │       jared_EGM20_model.csv       -> Refrence data (un-used at the moment)
+    │       jared_EGM20_model.csv       -> Reference data (un-used at the moment)
     │
     ├───results
-    │       cpu_edges.csv           -> The edeges of icosphere
-    │       heatmap_2.png           -> A 2D heatmap
-    │       heatmap_3.png           -> A 3D heatmap
+    │       cpu_edges.csv           -> The edges of icosphere
+    │       heatmap_2.png           -> A 2D heatmap of geopotential
+    │       heatmap_3.png           -> A 3D heatmap of geopotential
     │       output_potential.mat    -> Data containing the geo potentials
     │       vertices.csv            -> The vertices of icosphere
     │
@@ -81,7 +81,7 @@ CPU_Demo
             visulaize_icosphere.m   -> Matlab file to visualize icosphere
 
 --------------------------------------------------------------------------------
-Instructions on how to run the CPU demo
+INSTRUCTIONS on how to run the CPU demo
 
 Please follow the following instructions:
 
@@ -127,5 +127,5 @@ We can also compute the gravitational acceleration just like gravitational poten
 
 --------------------------------------------------------------------------------
 References:
-Satellite Orbits, by Oliver Montebruck
+Geopotential model: Satellite Orbits, by Oliver Montebruck
 Geodesic polyhedron: https://en.wikipedia.org/wiki/Geodesic_polyhedron
