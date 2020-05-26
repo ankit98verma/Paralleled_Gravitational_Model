@@ -46,7 +46,26 @@ Instructions on how to run smaller components of the project (In addition to dem
 Provide code output when run on Titan, especially if it takes a while to run.
 
 
+--------------------------------------------------------------------------------
+Output:
+Since for large values of depth of icosphere the CPU takes a lot of time to run hence 
+we are providing the results of running the "grav_run" till depth level 10.
+------------------------------------------------------------------------------------------
+|	Depth 	| 	 Icosphere CPU time (ms){Ankit}	| 	 Potential CPU time (ms){Garima}	|
+|	0		| 	 0.011424 						| 	 0.283104 							|
+|	1		| 	 0.03424 						| 	 0.95488 							|
+|	2		| 	 0.152384 						| 	 3.72976 							|
+|	3		| 	 0.868224 						| 	 14.7666 							|
+|	4		| 	 5.58147 						| 	 58.1747 							|
+|	5		| 	 27.9565 						| 	 232.287 							|
+|	6		| 	 180.549 						| 	 928.595 							|
+|	7		| 	 1176.9 						| 	 3718.36 							|
+|	8		| 	 8127.63 						| 	 14881.9 							|
+|	9		| 	 58169.6 						| 	 59533.1 							|
+|	10		| 	 436761 						| 	 238408 							|
+-------------------------------------------------------------------------------------------
 
+--------------------------------------------------------------------------------
  
 
 --------------------------------------------------------------------------------

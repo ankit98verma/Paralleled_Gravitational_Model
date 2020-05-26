@@ -4,7 +4,7 @@ clc
 close all
 
 
-fileID = fopen('output_potential.mat','r');
+fileID = fopen('../results/output_potential.mat','r');
 formatSpec = '%f %f %f %f %f';
 sizeA = [5 Inf];
 A = fscanf(fileID,formatSpec, sizeA);
@@ -31,7 +31,7 @@ saveas(gcf, '../results/heatmap_2.png');
 
 
 %% Generate 3D scatter plot
-figure(1)
+figure(2)
 title('Geopotential model');
 hold on
 grid on

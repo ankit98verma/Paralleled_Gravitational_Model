@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <time.h>
+#include <iomanip>
 
 #include <cuda_runtime.h>
 #include <algorithm>
@@ -382,11 +383,11 @@ int main(int argc, char **argv) {
 		return 0;
 
 	int len = atoi(argv[1]);
-	if (len > 10){
-		cout << "It is recommend to give depth <= 10" << endl;
-		cout << "Exiting the code" << endl;
-		return 0;
-	}
+	// if (len > 10){
+	// 	cout << "It is recommend to give depth < 10. For the depth 9 alone CPU takes around 60 seconds!" << endl;
+	// 	cout << "Exiting the code" << endl;
+	// 	return 0;
+	// }
 
 	cout << "Running from depth 0 to depth " << len << " (both inclusive)" << endl;
 	if((bool)atoi(argv[2]))
@@ -398,20 +399,31 @@ int main(int argc, char **argv) {
 	
 	float tmp_res[2];
 	for(int i=0; i<=len; i++){
+		cout << "Running for depth: " << i << endl;
 		run(i, 512, 1, (bool)atoi(argv[2]), cpu_times[i], tmp_res);	
 	}
 
 	// print table
-	cout << "\n----------------------------------------------------------------------------------------------------------------" << endl;
-	cout << "|\tDepth \t | \t Icosphere CPU time (ms){Ankit}\t| \t Potential CPU time (ms){Garima}\t|" << endl;
+	cout << "\n**********************************************************************************" << endl;
+	cout << "|"<< setw(7)<<"Depth"<<setw(2)<<"|"
+		 << setw(25)<<"|"<<setw(20)<<"CPU time (ms)"<<setw(4)<<"|"<<setw(23)<<"|" << endl;
+	cout << "|--------|------------------------|-----------------------|----------------------|" << endl;
+	cout << "|"<<setw(30)<<"|Icosphere (ms){Ankit}" << setw(27) 
+					<< "|Potential (ms){Garima} " << "|"<< setw(14) 
+					<< "Total (ms)" << setw(9) << "|"<< endl;
 	for(int i=0; i<=len; i++){	
-		cout << "|\t"<< i <<" \t | \t "<< cpu_times[i][0] <<" \t\t\t| \t "<< cpu_times[i][1] <<" \t\t\t\t|" << endl;
+		cout 	<< "|"
+				<< setw(5) << right<<i << setw(4)<< "|"
+				<< setw(15) << right << cpu_times[i][0]<< setw(10) <<"|"
+				<< setw(15) << right << cpu_times[i][1] << setw(9)<< "|"
+				<< setw(15) << right << cpu_times[i][0]+cpu_times[i][1] << setw(8)<< "|"
+				<< endl;
 	}
-	cout << "----------------------------------------------------------------------------------------------------------------\n" << endl;
+	cout << "**********************************************************************************\n" << endl;
 
 
 
     return 1;
 }
-
+// \t|\t \t|\tTotal (ms)\t\t|" << endl;
 

@@ -6,9 +6,9 @@ set(0,'defaultAxesFontSize', 14);
 set(0, 'DefaultLineLineWidth', 2);
 
 epsilon = 1e-6;
-%% vertices = readtable('vertices.csv');  % skips the first three rows of data
+%% 
+vertices = readtable('vertices.csv');  % skips the first three rows of data
 edges = readtable('cpu_edges.csv');
-vertices_sph = readtable('vertices_sph.csv');
 x = vertices.x;
 y = vertices.y;
 z = vertices.z;
