@@ -120,6 +120,7 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
 	float gpu_time_indata_cpy = -1;
 	float gpu_time_outdata_cpy = -1;
 	float gpu_time_gravitational = -1;
+	cudaError err;
 
 
 	START_TIMER();
@@ -129,7 +130,7 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
 	START_TIMER();
 		cudacall_icosphere_naive(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere);
-	cudaError err = cudaGetLastError();
+	err = cudaGetLastError();
     if (cudaSuccess != err){
         cerr << "Error " << cudaGetErrorString(err) << endl;
     }else{
@@ -145,6 +146,19 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
 	START_TIMER();
 		cudacall_icosphere(thread_num);
 	STOP_RECORD_TIMER(gpu_time_icosphere2);
+	err = cudaGetLastError();
+    if (cudaSuccess != err){
+        cerr << "Error " << cudaGetErrorString(err) << endl;
+    }else{
+    	if(verbose)
+        	cerr << "No kernel error detected" << endl;
+    }
+    
+    float tmp = 0;
+    START_TIMER();
+    	cudacall_sort(thread_num);
+    STOP_RECORD_TIMER(tmp);
+
 	err = cudaGetLastError();
     if (cudaSuccess != err){
         cerr << "Error " << cudaGetErrorString(err) << endl;
@@ -173,13 +187,14 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
 		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
 	    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
 	    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
+	    printf("GPU sorting calculation: %f ms\n", tmp);
 		printf("GPU potential calculation: %f ms\n", gpu_time_gravitational);
 		printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
 	}
 
 	// gpu_time_ms = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy + gpu_time_gravitational;
 
-	res[0] = gpu_time_icosphere + gpu_time_outdata_cpy + gpu_time_indata_cpy;
+	res[0] = gpu_time_icosphere2 + tmp + gpu_time_outdata_cpy + gpu_time_indata_cpy;
 	res[1] = gpu_time_gravitational;
 }
 
@@ -284,6 +299,20 @@ void output_potential(bool verbose){
 }
 
 
+void export_tmp(){
+	
+	cout << "Exporting: gpu_sorted_vertices.csv"<<endl;
+
+	string filename1 = "gpu_sorted_vertices.csv";
+	ofstream obj_stream;
+	obj_stream.open(filename1);
+	obj_stream << "x, y, z" << endl;
+	vertex * v = (vertex *) gpu_out_faces;
+	for(unsigned int i=0; i< 3*faces_length; i++){
+		obj_stream << v[i].x << ", " << v[i].y << ", " << v[i].z << endl;
+	}
+	obj_stream.close();
+}
 /*******************************************************************************
  * Function:        run
  *
@@ -300,7 +329,7 @@ void output_potential(bool verbose){
 *******************************************************************************/
 void run(int depth, int thread_num, float radius, bool verbose, float * cpu_res, float * gpu_res){
 
-//	N_SPHERICAL = atoi(argv[2]);
+
 	if(thread_num > 1024){
 		cout << "Thread per block exceeds its maximum limit of 1024.\n Using 1024 threads per block" << endl;
 	}
@@ -315,39 +344,29 @@ void run(int depth, int thread_num, float radius, bool verbose, float * cpu_res,
 		cout << "\n----------Running CPU Code----------\n" << endl;
 	time_profile_cpu(verbose, cpu_res);
 
-	// if(verbose)
-	// 	cout << "\n----------Running GPU Code----------\n" << endl;
-	// float gpu_time = time_profile_gpu(thread_num, verbose, gpu_res);
+	if(verbose)
+		cout << "\n----------Running GPU Code----------\n" << endl;
+	time_profile_gpu(thread_num, verbose, gpu_res);
+	
 	// if(verbose)
 	// 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
 	// verify_gpu_output(verbose);
 
 	/************************** TMP *****************************/
-	// if(verbose)
-	// 	cout << "\n----------Verifying Sorted GPU Icosphere----------\n" << endl;
-	// quickSort((void *)faces, 0, 3*faces_length-1, partition_sum);
-	
-	// cudacall_sort(thread_num);
-	// cudaError err = cudaGetLastError();
- //    if (cudaSuccess != err){
- //        cerr << "Error " << cudaGetErrorString(err) << endl;
- //    }else{
- //    	if(verbose)
- //        	cerr << "No kernel error detected" << endl;
- //    }
- //    cuda_cpy_output_data();
-    
- //    verify_gpu_output(verbose);
+
+	export_tmp();
+	/************************************************************/
 
 	// if(verbose)
 	// 	cout << "\n----------Verifying GPU Potential ----------\n" << endl;
 	// verify_gpu_potential(verbose);
 
 	float cpu_time = cpu_res[0] +  cpu_res[1];
+	float gpu_time = gpu_res[0] +  gpu_res[1];
 	if(verbose){
 		cout << "\nTime taken by the CPU is: " << cpu_time << " milliseconds" << endl;
-		// cout << "Time taken by the GPU is: " << gpu_time << " milliseconds" << endl;
-		// cout << "Speed up factor: " << cpu_time/gpu_time << "\n" << endl;
+		cout << "Time taken by the GPU is: " << gpu_time << " milliseconds" << endl;
+		cout << "Speed up factor: " << cpu_time/gpu_time << "\n" << endl;
 	}
 
 	// calculate the distance b/w two points of icosphere
@@ -388,39 +407,14 @@ int main(int argc, char **argv) {
 		cout << "Exiting the code" << endl;
 		return 0;
 	}
-
-	cout << "Running from depth 0 to depth " << len << " (both inclusive)" << endl;
 	if((bool)atoi(argv[2]))
 		cout << "Verbose ON" << endl;
 	else
 		cout << "Verbose OFF" << endl;
 
-	float cpu_times[len][2];
+	float cpu_times[2],gpu_times[2];
 	
-	float tmp_res[2];
-	for(int i=0; i<=len; i++){
-		cout << "Running for depth: " << i << endl;
-		run(i, 512, 1, (bool)atoi(argv[2]), cpu_times[i], tmp_res);	
-	}
-
-	// print table
-	cout << "\n**********************************************************************************" << endl;
-	cout << "|"<< setw(7)<<"Depth"<<setw(2)<<"|"
-		 << setw(25)<<"|"<<setw(20)<<"CPU time (ms)"<<setw(4)<<"|"<<setw(23)<<"|" << endl;
-	cout << "|--------|------------------------|-----------------------|----------------------|" << endl;
-	cout << "|"<<setw(30)<<"|Icosphere (ms){Ankit}" << setw(27) 
-					<< "|Potential (ms){Garima} " << "|"<< setw(14) 
-					<< "Total (ms)" << setw(9) << "|"<< endl;
-	for(int i=0; i<=len; i++){	
-		cout 	<< "|"
-				<< setw(5) << right<<i << setw(4)<< "|"
-				<< setw(15) << right << cpu_times[i][0]<< setw(10) <<"|"
-				<< setw(15) << right << cpu_times[i][1] << setw(9)<< "|"
-				<< setw(15) << right << cpu_times[i][0]+cpu_times[i][1] << setw(8)<< "|"
-				<< endl;
-	}
-	cout << "**********************************************************************************\n" << endl;
-
+	run(len, 1024, 1, (bool)atoi(argv[2]), cpu_times, gpu_times);	
 
 
     return 1;

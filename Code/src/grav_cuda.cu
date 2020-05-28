@@ -31,6 +31,48 @@ triangle * dev_faces_in;
 triangle * dev_faces_out;
 triangle * dev_verties;
 
+void cuda_cpy_input_data(){
+    gpu_out_faces = (triangle *)malloc(faces_length*sizeof(triangle));
+    CUDA_CALL(cudaMalloc((void **)&dev_faces_in, faces_length * sizeof(triangle)));
+    CUDA_CALL(cudaMalloc((void **)&dev_faces_out, faces_length * sizeof(triangle)));
+    CUDA_CALL(cudaMemcpy(dev_faces_in, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
+
+    ind2 = 0;
+    pointers[0] = dev_faces_in;
+    pointers[1] = dev_faces_out;
+
+    // GARIMA DATA
+
+    // GPU Coefficient file
+    CUDA_CALL(cudaMalloc((void**) &dev_coeff, sizeof(float) * 2*N_coeff));
+    CUDA_CALL(cudaMemcpy(dev_coeff, coeff, sizeof(float) * 2*N_coeff, cudaMemcpyHostToDevice));
+
+    // Vertices
+    CUDA_CALL(cudaMalloc((void**) &dev_vertices, sizeof(vertex) * vertices_length));
+    CUDA_CALL(cudaMemcpy(dev_vertices, vertices, sizeof(vertex) * vertices_length, cudaMemcpyHostToDevice));
+
+    // OUTput potential - to be compared with CPU values
+    CUDA_CALL(cudaMalloc((void**) &dev_potential, sizeof(float) * vertices_length));
+    CUDA_CALL(cudaMemset(dev_potential, 0, vertices_length* sizeof(float)));
+    gpu_out_potential = (float*) malloc(sizeof(float) * vertices_length);
+}
+
+void cuda_cpy_output_data(){
+    CUDA_CALL(cudaMemcpy(gpu_out_faces, pointers[ind2], faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(gpu_out_potential, dev_potential, vertices_length*sizeof(float), cudaMemcpyDeviceToHost));
+}
+
+void free_gpu_memory(){
+    CUDA_CALL(cudaFree(dev_faces_in));
+    CUDA_CALL(cudaFree(dev_faces_out));
+    free(gpu_out_faces);
+    CUDA_CALL(cudaFree(dev_coeff));
+    CUDA_CALL(cudaFree(dev_potential));
+    CUDA_CALL(cudaFree(dev_vertices));
+    free(gpu_out_potential);
+}
+
+
 __device__ void break_triangle(triangle face_tmp, vertex * v_tmp, float radius) {
 	float x_tmp, y_tmp, z_tmp, scale;
     for(int i=0; i<3; i++){
@@ -162,32 +204,102 @@ void cudacall_icosphere(int thread_num) {
 }
 
 
-__global__ 
-void kernal_sort_faces(vertex * vertices, const unsigned int vertices_length, int iter){
-	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	const unsigned int numthrds = blockDim.x * gridDim.x;
+// __global__ 
+// void kernal_sort_faces(vertex * vertices, const unsigned int vertices_length, int iter, float * sum){
+// 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+// 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
-    vertex min_v, max_v;
-    float sum_i, sum_i1;
-	while(idx+1 < vertices_length){
+//     vertex tmp, tmp1;
+//     float sum_i, sum_i1;
+//     unsigned int id;
+// 	while(idx < vertices_length){
+//         id = 2*idx + (iter+idx)%2;
         
-        if((iter+idx)%2==0){
-            
-            sum_i = vertices[idx].x+vertices[idx].y+vertices[idx].z;
-            sum_i1 = vertices[idx+1].x+vertices[idx+1].y+vertices[idx+1].z;
-            if(sum_i < sum_i1){
-                min_v = vertices[idx];
-                max_v = vertices[idx+1];
-            }else{
-                min_v = vertices[idx+1];
-                max_v = vertices[idx];
+//         if(id+1<vertices_length){
+//             tmp = vertices[id];
+//             tmp1 = vertices[id+1];
+
+//             sum_i = tmp.x+tmp.y+tmp.z;
+//             sum_i1 = tmp1.x+tmp1.y+tmp1.z;
+//             if(sum_i >= sum_i1){
+//                 // even iter , even thread works
+//                 vertices[id] = tmp1;
+//                 vertices[id+1] = tmp;
+//                 atomicAdd(sum, 1);
+//             }
+//         }
+
+//         // if((iter+idx)%2==0){
+//         //     tmp = vertices[idx];
+//         //     tmp1 = vertices[idx+1];
+
+//         //     sum_i = tmp.x+tmp.y+tmp.z;
+//         //     sum_i1 = tmp1.x+tmp1.y+tmp1.z;
+//         //     if(sum_i >= sum_i1){
+//         //         // even iter , even thread works
+//         //         vertices[idx] = tmp1;
+//         //         vertices[idx+1] = tmp;
+//         //         atomicAdd(sum, 1);
+//         //     }
+//         // }
+// 		idx += numthrds;
+// 	}
+// }
+
+__global__ 
+void kernal_sort_even_faces(vertex * vertices, const unsigned int vertices_length, int iter, float * sum){
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+
+    vertex tmp, tmp1;
+    float sum_i, sum_i1;
+    unsigned int id;
+    while(idx < vertices_length){
+        id = 2*idx;
+        
+        if(id+1<vertices_length){
+            tmp = vertices[id];
+            tmp1 = vertices[id+1];
+
+            sum_i = tmp.x+tmp.y+tmp.z;
+            sum_i1 = tmp1.x+tmp1.y+tmp1.z;
+            if(sum_i >= sum_i1){
+                // even iter , even thread works
+                vertices[id] = tmp1;
+                vertices[id+1] = tmp;
+                atomicAdd(sum, 1);
             }
-            // even iter , even thread works
-            vertices[idx] = min_v;
-            vertices[idx+1] = max_v;
-        }		
-		idx += numthrds;
-	}
+        }
+        idx += numthrds;
+    }
+}
+
+__global__ 
+void kernal_sort_odd_faces(vertex * vertices, const unsigned int vertices_length, int iter, float * sum){
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+
+    vertex tmp, tmp1;
+    float sum_i, sum_i1;
+    unsigned int id;
+    while(idx < vertices_length){
+        id = 2*idx+1;
+        
+        if(id+1<vertices_length){
+            tmp = vertices[id];
+            tmp1 = vertices[id+1];
+
+            sum_i = tmp.x+tmp.y+tmp.z;
+            sum_i1 = tmp1.x+tmp1.y+tmp1.z;
+            if(sum_i >= sum_i1){
+                // even iter , even thread works
+                vertices[id] = tmp1;
+                vertices[id+1] = tmp;
+                atomicAdd(sum, 1);
+            }
+        }
+        idx += numthrds;
+    }
 }
 
 void cudacall_sort(int thread_num) {
@@ -195,9 +307,20 @@ void cudacall_sort(int thread_num) {
     // each thread creates a sub triangle
     int len = 3*faces_length;
     int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-    for(int i=0; i<len; i++){
-        kernal_sort_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2], len, i);
+    float * dev_s; float * s = (float *)malloc(sizeof(float));
+    CUDA_CALL(cudaMalloc(&dev_s, sizeof(float)));
+    CUDA_CALL(cudaMemset(dev_s, 0, sizeof(float)));
+    for(int i=0; i<=len/2; i++){
+        // kernal_sort_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2], len, i, dev_s);
+        kernal_sort_even_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2], len, i, dev_s);
+        kernal_sort_odd_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2], len, i, dev_s);
+        CUDA_CALL(cudaMemcpy(s, dev_s, sizeof(float), cudaMemcpyDeviceToHost));
+        if(s == 0){
+            break;
+        }
     }
+    cudaFree(dev_s);
+    free(s);
 
 }
 
@@ -288,7 +411,7 @@ __device__ void gpu_spherical_harmonics(float radius, const int n_sph, vertex de
 
 
 __global__
-void kerne_gravitational(int g_vertices_length, float g_radius, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* dev_potential){
+void kernel_gravitational(int g_vertices_length, float g_radius, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* dev_potential){
 
 
     int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -307,48 +430,6 @@ void cudacall_gravitational(int thread_num){
 
     int n_blocks = ceil(vertices_length*1.0/thread_num);
     n_blocks = std::min(65535, n_blocks);
-//    cout<<"NUmber of GPU blocks \t"<< n_blocks;
-    kerne_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
+    kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 
-}
-
-void cuda_cpy_input_data(){
-	gpu_out_faces = (triangle *)malloc(faces_length*sizeof(triangle));
-	CUDA_CALL(cudaMalloc((void **)&dev_faces_in, faces_length * sizeof(triangle)));
-	CUDA_CALL(cudaMalloc((void **)&dev_faces_out, faces_length * sizeof(triangle)));
-	CUDA_CALL(cudaMemcpy(dev_faces_in, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
-
-    ind2 = 0;
-	pointers[0] = dev_faces_in;
-	pointers[1] = dev_faces_out;
-
-	// GARIMA DATA
-
-	// GPU Coefficient file
-	CUDA_CALL(cudaMalloc((void**) &dev_coeff, sizeof(float) * 2*N_coeff));
-    CUDA_CALL(cudaMemcpy(dev_coeff, coeff, sizeof(float) * 2*N_coeff, cudaMemcpyHostToDevice));
-
-    // Vertices
-    CUDA_CALL(cudaMalloc((void**) &dev_vertices, sizeof(vertex) * vertices_length));
-    CUDA_CALL(cudaMemcpy(dev_vertices, vertices, sizeof(vertex) * vertices_length, cudaMemcpyHostToDevice));
-
-    // OUTput potential - to be compared with CPU values
-    CUDA_CALL(cudaMalloc((void**) &dev_potential, sizeof(float) * vertices_length));
-    CUDA_CALL(cudaMemset(dev_potential, 0, vertices_length* sizeof(float)));
-    gpu_out_potential = (float*) malloc(sizeof(float) * vertices_length);
-}
-
-void cuda_cpy_output_data(){
-	CUDA_CALL(cudaMemcpy(gpu_out_faces, pointers[ind2], faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
-	CUDA_CALL(cudaMemcpy(gpu_out_potential, dev_potential, vertices_length*sizeof(float), cudaMemcpyDeviceToHost));
-}
-
-void free_gpu_memory(){
-	CUDA_CALL(cudaFree(dev_faces_in));
-	CUDA_CALL(cudaFree(dev_faces_out));
-	free(gpu_out_faces);
-	CUDA_CALL(cudaFree(dev_coeff));
-	CUDA_CALL(cudaFree(dev_potential));
-	CUDA_CALL(cudaFree(dev_vertices));
-	free(gpu_out_potential);
 }
