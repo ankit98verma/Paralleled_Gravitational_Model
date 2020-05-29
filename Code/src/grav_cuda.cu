@@ -23,6 +23,8 @@ using std::endl;
 // variables local to this file
 float* dev_coeff;
 float* dev_potential;
+int* dev_N;
+int* dev_M;
 vertex* dev_vertices;
 
 int ind2;
@@ -55,6 +57,11 @@ void cuda_cpy_input_data(){
     CUDA_CALL(cudaMalloc((void**) &dev_potential, sizeof(float) * vertices_length));
     CUDA_CALL(cudaMemset(dev_potential, 0, vertices_length* sizeof(float)));
     gpu_out_potential = (float*) malloc(sizeof(float) * vertices_length);
+
+
+    CUDA_CALL(cudaMalloc((void**) &dev_N, sizeof(int) * N_coeff));
+    CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
+
 }
 
 void cuda_cpy_output_data(){
@@ -204,7 +211,7 @@ void cudacall_icosphere(int thread_num) {
 }
 
 
-// __global__ 
+// __global__
 // void kernal_sort_faces(vertex * vertices, const unsigned int vertices_length, int iter, float * sum){
 // 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 // 	const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -214,7 +221,7 @@ void cudacall_icosphere(int thread_num) {
 //     unsigned int id;
 // 	while(idx < vertices_length){
 //         id = 2*idx + (iter+idx)%2;
-        
+
 //         if(id+1<vertices_length){
 //             tmp = vertices[id];
 //             tmp1 = vertices[id+1];
@@ -246,7 +253,7 @@ void cudacall_icosphere(int thread_num) {
 // 	}
 // }
 
-__global__ 
+__global__
 void kernal_sort_even_faces(vertex * vertices, const unsigned int vertices_length, int iter, float * sum){
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -256,7 +263,7 @@ void kernal_sort_even_faces(vertex * vertices, const unsigned int vertices_lengt
     unsigned int id;
     while(idx < vertices_length){
         id = 2*idx;
-        
+
         if(id+1<vertices_length){
             tmp = vertices[id];
             tmp1 = vertices[id+1];
@@ -274,7 +281,7 @@ void kernal_sort_even_faces(vertex * vertices, const unsigned int vertices_lengt
     }
 }
 
-__global__ 
+__global__
 void kernal_sort_odd_faces(vertex * vertices, const unsigned int vertices_length, int iter, float * sum){
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -284,7 +291,7 @@ void kernal_sort_odd_faces(vertex * vertices, const unsigned int vertices_length
     unsigned int id;
     while(idx < vertices_length){
         id = 2*idx+1;
-        
+
         if(id+1<vertices_length){
             tmp = vertices[id];
             tmp1 = vertices[id+1];
@@ -329,12 +336,6 @@ __device__ void gpu_spherical_harmonics(float radius, const int n_sph, vertex de
 
     float dev_V[21*21];
     float dev_W[21*21];
-
-//    CUDA_CALL(cudaMalloc((void**) &dev_V, sizeof(float) * 21*21));
-//    CUDA_CALL(cudaMemset(dev_V, 0, 21*21* sizeof(float)));
-//
-//    CUDA_CALL(cudaMalloc((void**) &dev_W, sizeof(float) * 21*21));
-//    CUDA_CALL(cudaMemset(dev_W, 0, 21*21* sizeof(float)));
 
     // Define pseudo coefficients
     float Radius_sq = powf(radius,2);
@@ -388,7 +389,7 @@ __device__ void gpu_spherical_harmonics(float radius, const int n_sph, vertex de
             if (m==0){
                 N = sqrtf(2*n+1);
                 C = N*dev_coeff[n*(n_sph+2)+0];
-                U[thread_index] = C*dev_V[n*(n_sph+1) + 0];
+//                U[thread_index] = C*dev_V[n*(n_sph+1) + 0];
             }
             else {
                 p = 1.0;
@@ -405,13 +406,11 @@ __device__ void gpu_spherical_harmonics(float radius, const int n_sph, vertex de
         }
     }
     U[thread_index] = U[thread_index]*mhu/R_eq;
-
-
 }
 
 
 __global__
-void kernel_gravitational(int g_vertices_length, float g_radius, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* dev_potential){
+void naive_kernel_gravitational(int g_vertices_length, float g_radius, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* dev_potential){
 
 
     int thread_index = blockIdx.x * blockDim.x + threadIdx.x;
@@ -422,14 +421,160 @@ void kernel_gravitational(int g_vertices_length, float g_radius, const int n_sph
         thread_index += blockDim.x * gridDim.x;
     }
 
-//    CUDA_CALL(cudaFree(dev_V));
-//  CUDA_CALL(cudaFree(dev_W));
 }
 
-void cudacall_gravitational(int thread_num){
+__global__
+void optimal_kernel_gravitational(int g_vertices_length, float radius, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
 
-    int n_blocks = ceil(vertices_length*1.0/thread_num);
-    n_blocks = std::min(65535, n_blocks);
-    kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
+
+//    int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
+//    int potential_index = (blockIdx.x * blockDim.x + threadIdx.x)%231;
+    int potential_index = blockIdx.x;
+
+    float dev_V[21*21];
+    float dev_W[21*21];
+
+    // Define pseudo coefficients
+    float Radius_sq = powf(radius,2);
+    float rho = powf(R_eq,2)/Radius_sq;
+
+    float x0 = R_eq*dev_vertices[potential_index].x/Radius_sq;
+    float y0 = R_eq*dev_vertices[potential_index].y/Radius_sq;
+    float z0 = R_eq*dev_vertices[potential_index].z/Radius_sq;
+
+    // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
+    dev_V[0]= R_eq /sqrtf(Radius_sq);
+    dev_W[0] = 0.0;
+
+    dev_V[1*(n_sph+1) + 0] = z0 *dev_V[0];
+    dev_W[1*(n_sph+1) + 0] = 0.0;
+
+    for (int n=2; n<n_sph+1; n++){
+        dev_V[n*(n_sph+1) + 0] = ((2*n-1)*z0*dev_V[(n-1)*(n_sph+1) + 0] - (n-1)*rho*dev_V[(n-2)*(n_sph+1) + 0])/n;
+        dev_W[n*(n_sph+1) + 0] = 0.0;
+    } // Eqn 3.30
+
+
+    //Calculate tesseral and sectoral terms
+    for (int m = 1; m < n_sph + 1; m++){
+        // Eqn 3.29
+        dev_V[m*(n_sph+1) + m] = (2*m-1)*(x0*dev_V[(m-1)*(n_sph+1) + (m-1)] - y0*dev_W[(m-1)*(n_sph+1) + (m-1)]);
+        dev_W[m*(n_sph+1) + m] = (2*m-1)*(x0*dev_W[(m-1)*(n_sph+1) + (m-1)] + y0*dev_V[(m-1)*(n_sph+1) + (m-1)]);
+
+        // n=m+1 (only one term)
+        if (m < n_sph){
+            dev_V[(m+1)*(n_sph+1) + (m)] = (2*m+1)*z0*dev_V[m*(n_sph+1) + m];
+            dev_W[(m+1)*(n_sph+1) + (m)] = (2*m+1)*z0*dev_W[m*(n_sph+1) + m] ;
+        }
+
+        for (int n = m+2; n<n_sph+1; n++){
+            dev_V[n*(n_sph+1) + m] = ((2*n-1)*z0*dev_V[(n-1)*(n_sph+1) + m]-(n+m-1)*rho*dev_V[(n-2)*(n_sph+1) + m])/(n-m);
+            dev_W[n*(n_sph+1) + m] = ((2*n-1)*z0*dev_W[(n-1)*(n_sph+1) + m]-(n+m-1)*rho*dev_W[(n-2)*(n_sph+1) + m])/(n-m);
+        }
+    }
+
+        // thread index for the block and shared memory
+        unsigned int tid = threadIdx.x;
+
+        __shared__ float shmem[256]; //stores CV+SW
+        shmem[tid] = 0.0; //potential
+
+        // Calculate potential
+        float C = 0; // Cnm coeff
+        float S = 0; // Snm coeff
+        float Norm = 0; // normalisation number
+        float p = 1.0;
+
+        if (tid<N_coeff){
+            int n = N[tid];
+            int m = M[tid];
+
+            if (m==0){
+                    Norm = sqrtf(2*n+1);
+                    C = Norm*dev_coeff[n*(n_sph+2)+0];
+                    S = 0;
+                }
+                else {
+                    p = 1.0;
+                    // gpu_facprod(n,m,&p);
+                    for (int i = n-m+1; i<=n+m; i++){
+                        p = p/i;
+                    }
+                    Norm = sqrtf((2)*(2*n+1)*p);
+                    C = Norm*dev_coeff[n*(n_sph+2)+m];
+                    S = Norm*dev_coeff[(n_sph-n)*(n_sph+2)+ (n_sph-m+1)];
+
+                }
+            shmem[tid] = C*dev_V[n*(n_sph+1) + m] + S*dev_W[n*(n_sph+1) + m];
+        }
+        // Calculation of the Gravitational Potential Calculation model
+
+        // sync threads before commencing the stages of reduction
+        __syncthreads();
+
+        // Reduction #3: Sequential Addressing
+        // Ref: Presentation "Optimizing Parallel Reduction in CUDA", by Mark Harris.
+        for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            // conduct the summation
+            shmem[tid] = shmem[tid] + shmem[tid + s];
+//                atomicAdd(&shmem[tid], shmem[tid + s]);
+        }
+        // Sync threads after every stage of reduction
+        __syncthreads();
+    }
+
+//    U[potential_index] = shmem[0]*mhu/R_eq;
+    U[potential_index] = shmem[0];
+//        thread_index += blockDim.x * gridDim.x;
+//    }
 
 }
+
+void optimal_cudacall_gravitational(int thread_num){
+
+//    int n_blocks = ceil(vertices_length*1.0/thread_num);
+//    n_blocks = std::min(65535, n_blocks);
+
+    int len = vertices_length;
+//    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+    int n_blocks = std::min(65535, len);
+    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
+
+    int M[N_coeff];
+    int N[N_coeff];
+
+    int k = 0;
+    for (int n=0;n<N_SPHERICAL+1;n++){
+        for (int m=0;m<n+1;m++){
+            N[k] = n;
+            M[k] = m;
+//            cout<<'\n'<<n<<'\t'<<m<<'\t'<<N[k]<<'\t'<<M[k];
+            k++;
+        }
+    }
+
+    CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
+
+    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
+
+//    free(M);
+//    free(N);
+}
+
+
+
+
+
+void naive_cudacall_gravitational(int thread_num){
+
+//    int n_blocks = ceil(vertices_length*1.0/thread_num);
+//    n_blocks = std::min(65535, n_blocks);
+
+    int len = vertices_length;
+    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+
+    naive_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
+}
+

@@ -180,7 +180,7 @@ void init_icosphere(){
 		c++;
 	}
 	curr_faces_count = c;
-	
+
 }
 
 void get_midpoints(triangle tmp, triangle * tri){
@@ -200,7 +200,7 @@ void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
 	memcpy(faces_copy, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
-	
+
 	triangle triag_tmp;
 	for(unsigned int j=1; j<=max_depth; j++){
 
@@ -495,11 +495,10 @@ float spherical_harmonics(vertex R_vec){
         }
     }
 
-    for (int m=0; m<N_SPHERICAL+1; m++){
-        for (int n = m; n<N_SPHERICAL+1; n++){
-        }
-    }
-
+//    for (int m=0; m<N_SPHERICAL+1; m++){
+//        for (int n = m; n<N_SPHERICAL+1; n++){
+//        }
+//    }
 
     // Calculate potential
     float C = 0; // Cnm coeff
@@ -514,7 +513,7 @@ float spherical_harmonics(vertex R_vec){
             if (m==0){
                 N = sqrt(2*n+1);
                 C = N*coeff[n][0];
-                U = C*V[n][0];
+//                U = C*V[n][0];
             }
             else {
                 p = facprod(n,m);

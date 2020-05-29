@@ -77,7 +77,7 @@ int check_args(int argc, char **argv){
  * Return Values:   CPU computational time
 *******************************************************************************/
 void time_profile_cpu(bool verbose, float * res){
-	
+
 	float cpu_time_icosphere_ms = 0;
 	float cpu_time_fill_vertices_ms = 0;
 	float cpu_time_grav_pot_ms = 0;
@@ -115,7 +115,7 @@ void time_profile_cpu(bool verbose, float * res){
  * Return Values:   GPU computational time
 *******************************************************************************/
 void time_profile_gpu(int thread_num, bool verbose, float * res){
-	
+
 	float gpu_time_icosphere = -1, gpu_time_icosphere2 =-1;
 	float gpu_time_indata_cpy = -1;
 	float gpu_time_outdata_cpy = -1;
@@ -153,27 +153,28 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
     	if(verbose)
         	cerr << "No kernel error detected" << endl;
     }
-    
-    float tmp = 0;
-    START_TIMER();
-    	cudacall_sort(thread_num);
-    STOP_RECORD_TIMER(tmp);
 
-	err = cudaGetLastError();
-    if (cudaSuccess != err){
-        cerr << "Error " << cudaGetErrorString(err) << endl;
-    }else{
-    	if(verbose)
-        	cerr << "No kernel error detected" << endl;
-    }
+    float tmp = 0;
+//    START_TIMER();
+//    	cudacall_sort(thread_num);
+//    STOP_RECORD_TIMER(tmp);
+//
+//	err = cudaGetLastError();
+//    if (cudaSuccess != err){
+//        cerr << "Error " << cudaGetErrorString(err) << endl;
+//    }else{
+//    	if(verbose)
+//        	cerr << "No kernel error detected" << endl;
+//    }
 
     // COMPUTING GRAVITATIONAL POTENTIAL
     START_TIMER();
-        cudacall_gravitational(thread_num);
+        optimal_cudacall_gravitational(thread_num);
+//        naive_cudacall_gravitational(thread_num);
     STOP_RECORD_TIMER(gpu_time_gravitational);
     err = cudaGetLastError();
     if (cudaSuccess != err){
-        cerr << "Error " << cudaGetErrorString(err) << endl;
+        cerr << "Potential Error " << cudaGetErrorString(err) << endl;
     }else{
     	if(verbose)
         	cerr << "No kernel error detected" << endl;
@@ -288,7 +289,7 @@ void verify_gpu_output(bool verbose){
 void output_potential(bool verbose){
 	if(verbose)
    		cout<<"Exporting: results/output_potential.mat" << endl;
-    
+
     std::ofstream f;
     f.open("results/output_potential.mat", std::ios::out);
 
@@ -300,7 +301,7 @@ void output_potential(bool verbose){
 
 
 void export_tmp(){
-	
+
 	cout << "Exporting: gpu_sorted_vertices.csv"<<endl;
 
 	string filename1 = "gpu_sorted_vertices.csv";
@@ -340,6 +341,8 @@ void run(int depth, int thread_num, float radius, bool verbose, float * cpu_res,
 	allocate_cpu_mem(verbose);
 	init_icosphere();
 
+	cpu_res[0] = 0;
+	cpu_res[1] = 0;
 	if(verbose)
 		cout << "\n----------Running CPU Code----------\n" << endl;
 	time_profile_cpu(verbose, cpu_res);
@@ -347,19 +350,19 @@ void run(int depth, int thread_num, float radius, bool verbose, float * cpu_res,
 	if(verbose)
 		cout << "\n----------Running GPU Code----------\n" << endl;
 	time_profile_gpu(thread_num, verbose, gpu_res);
-	
+
 	// if(verbose)
 	// 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
 	// verify_gpu_output(verbose);
 
-	/************************** TMP *****************************/
+//	/************************** TMP *****************************/
+//
+//	export_tmp();
+//	/************************************************************/
 
-	export_tmp();
-	/************************************************************/
-
-	// if(verbose)
-	// 	cout << "\n----------Verifying GPU Potential ----------\n" << endl;
-	// verify_gpu_potential(verbose);
+	 if(verbose)
+	 	cout << "\n----------Verifying GPU Potential ----------\n" << endl;
+	 verify_gpu_potential(verbose);
 
 	float cpu_time = cpu_res[0] +  cpu_res[1];
 	float gpu_time = gpu_res[0] +  gpu_res[1];
@@ -402,19 +405,19 @@ int main(int argc, char **argv) {
 		return 0;
 
 	int len = atoi(argv[1]);
-	if (len >= 10){
-		cout << "It is recommend to give depth < 10. For the depth 9 alone CPU takes around 60 seconds!" << endl;
-		cout << "Exiting the code" << endl;
-		return 0;
-	}
+//	if (len >= 10){
+//		cout << "It is recommend to give depth < 10. For the depth 9 alone CPU takes around 60 seconds!" << endl;
+//		cout << "Exiting the code" << endl;
+//		return 0;
+//	}
 	if((bool)atoi(argv[2]))
 		cout << "Verbose ON" << endl;
 	else
 		cout << "Verbose OFF" << endl;
 
 	float cpu_times[2],gpu_times[2];
-	
-	run(len, 1024, 1, (bool)atoi(argv[2]), cpu_times, gpu_times);	
+
+	run(len, 256, 1, (bool)atoi(argv[2]), cpu_times, gpu_times);
 
 
     return 1;
