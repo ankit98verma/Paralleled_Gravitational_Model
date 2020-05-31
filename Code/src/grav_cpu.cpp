@@ -53,7 +53,7 @@ void init_vars(unsigned int depth, float r){
 	epsilon = 1e-6;
 	max_depth = depth;
 	radius = r;
-	epsilon_pot = 1e-9;
+	epsilon_pot = 1e-7;
 	// Get coefficients for the Potential function calculations
 	get_coefficients();
 }
@@ -180,7 +180,7 @@ void init_icosphere(){
 		c++;
 	}
 	curr_faces_count = c;
-	
+
 }
 
 void get_midpoints(triangle tmp, triangle * tri){
@@ -200,7 +200,7 @@ void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
 	memcpy(faces_copy, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
-	
+
 	triangle triag_tmp;
 	for(unsigned int j=1; j<=max_depth; j++){
 
@@ -270,15 +270,21 @@ void export_csv(triangle * f, string filename1, string filename2, bool verbose){
 }
 
 void fill_vertices(){
+	vertex * all_vst = (vertex *)faces;
+	
 	quickSort((void *)faces, 0, 3*faces_length-1, partition_sum);
+	
+	// for(unsigned int i=0; i<3*faces_length; i++){
+	// 	cout << i << ", " << all_vst[i].x+all_vst[i].y+all_vst[i].z << endl;
+	// }
+	// cout << "----------------------" << endl;
 
 	int is_add=1;
 	vertex * all_vs = (vertex *)faces;
-	vertices[0].x = all_vs[0].x;
+	vertices[0].x = all_vs[0].x;	
 	vertices[0].y = all_vs[0].y;
 	vertices[0].z = all_vs[0].z;
 	unsigned int c_start = 0, c_end = 1;
-
 	for(unsigned int i=1; i<3*faces_length; i++){
 		float sum_i = all_vs[i].x+all_vs[i].y+all_vs[i].z;
 		float sum_i_1 = all_vs[i-1].x+all_vs[i-1].y+all_vs[i-1].z;
@@ -495,11 +501,10 @@ float spherical_harmonics(vertex R_vec){
         }
     }
 
-    for (int m=0; m<N_SPHERICAL+1; m++){
-        for (int n = m; n<N_SPHERICAL+1; n++){
-        }
-    }
-
+//    for (int m=0; m<N_SPHERICAL+1; m++){
+//        for (int n = m; n<N_SPHERICAL+1; n++){
+//        }
+//    }
 
     // Calculate potential
     float C = 0; // Cnm coeff
@@ -514,7 +519,7 @@ float spherical_harmonics(vertex R_vec){
             if (m==0){
                 N = sqrt(2*n+1);
                 C = N*coeff[n][0];
-                U = C*V[n][0];
+//                U = C*V[n][0];
             }
             else {
                 p = facprod(n,m);

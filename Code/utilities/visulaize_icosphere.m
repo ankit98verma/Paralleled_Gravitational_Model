@@ -6,16 +6,17 @@ set(0,'defaultAxesFontSize', 14);
 set(0, 'DefaultLineLineWidth', 2);
 
 epsilon = 1e-6;
-%% vertices = readtable('vertices.csv');  % skips the first three rows of data
-edges = readtable('cpu_edges.csv');
-vertices_sph = readtable('vertices_sph.csv');
+%% 
+vertices = readtable('../results/vertices.csv');  % skips the first three rows of data
+
+edges = readtable('../results/cpu_edges.csv');
 x = vertices.x;
 y = vertices.y;
 z = vertices.z;
 %% plotting vertices
 figure(3);
 hold on;
-% plot3(x, y, z, 'r*');
+plot3(x, y, z, 'r*');
 
 %% plotting edeges
 for i = 1:height(edges)
@@ -25,3 +26,23 @@ for i = 1:height(edges)
     plot3(x_tmp, y_tmp, z_tmp, 'b');
 end
 saveas(gcf, '../results/icosphere.png');
+
+%%
+%tmp ops
+vertices = readtable('gpu_sorted_vertices.csv');  % skips the first three rows of data
+
+v = vertices.x + vertices.y+ vertices.z;
+% diffs = v(1:end-1)-v(2:end);
+% diffs(abs(diffs) < 0.009) =     0;
+
+writematrix(v, 'sum.csv')
+plot(v);
+
+% inds = find(diffs); 
+% inds = inds/1024;
+% figure();
+% writematrix(inds, 'inds.csv')
+% plot(inds(1:end-1)-inds(2:end))
+
+
+
