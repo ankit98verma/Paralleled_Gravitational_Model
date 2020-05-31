@@ -53,7 +53,7 @@ void init_vars(unsigned int depth, float r){
 	epsilon = 1e-6;
 	max_depth = depth;
 	radius = r;
-	epsilon_pot = 1e-9;
+	epsilon_pot = 1e-7;
 	// Get coefficients for the Potential function calculations
 	get_coefficients();
 }

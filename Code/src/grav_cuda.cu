@@ -23,8 +23,6 @@ using std::endl;
 // variables local to this file
 float* dev_coeff;
 float* dev_potential;
-int* dev_N;
-int* dev_M;
 vertex* dev_vertices;
 
 int ind2;
@@ -58,10 +56,6 @@ void cuda_cpy_input_data(){
     CUDA_CALL(cudaMemset(dev_potential, 0, vertices_length* sizeof(float)));
     gpu_out_potential = (float*) malloc(sizeof(float) * vertices_length);
 
-
-    CUDA_CALL(cudaMalloc((void**) &dev_N, sizeof(int) * N_coeff));
-    CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
-
 }
 
 void cuda_cpy_output_data(){
@@ -76,6 +70,7 @@ void free_gpu_memory(){
     CUDA_CALL(cudaFree(dev_coeff));
     CUDA_CALL(cudaFree(dev_potential));
     CUDA_CALL(cudaFree(dev_vertices));
+
     free(gpu_out_potential);
 }
 
@@ -424,11 +419,12 @@ void naive_kernel_gravitational(int g_vertices_length, float g_radius, const int
 }
 
 __global__
-void optimal_kernel_gravitational(int g_vertices_length, float radius, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
+void optimal_kernel_gravitational(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
 
 
 //    int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
 //    int potential_index = (blockIdx.x * blockDim.x + threadIdx.x)%231;
+
     int potential_index = blockIdx.x;
 
     float dev_V[21*21];
@@ -436,14 +432,14 @@ void optimal_kernel_gravitational(int g_vertices_length, float radius, const int
 
     // Define pseudo coefficients
     float Radius_sq = powf(radius,2);
-    float rho = powf(R_eq,2)/Radius_sq;
+    float rho = powf(eq_R,2)/Radius_sq;
 
-    float x0 = R_eq*dev_vertices[potential_index].x/Radius_sq;
-    float y0 = R_eq*dev_vertices[potential_index].y/Radius_sq;
-    float z0 = R_eq*dev_vertices[potential_index].z/Radius_sq;
+    float x0 = eq_R*dev_vertices[potential_index].x/Radius_sq;
+    float y0 = eq_R*dev_vertices[potential_index].y/Radius_sq;
+    float z0 = eq_R*dev_vertices[potential_index].z/Radius_sq;
 
     // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
-    dev_V[0]= R_eq /sqrtf(Radius_sq);
+    dev_V[0]= eq_R/radius;
     dev_W[0] = 0.0;
 
     dev_V[1*(n_sph+1) + 0] = z0 *dev_V[0];
@@ -453,7 +449,6 @@ void optimal_kernel_gravitational(int g_vertices_length, float radius, const int
         dev_V[n*(n_sph+1) + 0] = ((2*n-1)*z0*dev_V[(n-1)*(n_sph+1) + 0] - (n-1)*rho*dev_V[(n-2)*(n_sph+1) + 0])/n;
         dev_W[n*(n_sph+1) + 0] = 0.0;
     } // Eqn 3.30
-
 
     //Calculate tesseral and sectoral terms
     for (int m = 1; m < n_sph + 1; m++){
@@ -492,20 +487,18 @@ void optimal_kernel_gravitational(int g_vertices_length, float radius, const int
             if (m==0){
                     Norm = sqrtf(2*n+1);
                     C = Norm*dev_coeff[n*(n_sph+2)+0];
-                    S = 0;
+                    shmem[tid] = C*dev_V[n*(n_sph+1) + 0];
                 }
                 else {
                     p = 1.0;
-                    // gpu_facprod(n,m,&p);
                     for (int i = n-m+1; i<=n+m; i++){
                         p = p/i;
                     }
                     Norm = sqrtf((2)*(2*n+1)*p);
                     C = Norm*dev_coeff[n*(n_sph+2)+m];
                     S = Norm*dev_coeff[(n_sph-n)*(n_sph+2)+ (n_sph-m+1)];
-
+                    shmem[tid] = C*dev_V[n*(n_sph+1) + m] + S*dev_W[n*(n_sph+1) + m];
                 }
-            shmem[tid] = C*dev_V[n*(n_sph+1) + m] + S*dev_W[n*(n_sph+1) + m];
         }
         // Calculation of the Gravitational Potential Calculation model
 
@@ -549,18 +542,20 @@ void optimal_cudacall_gravitational(int thread_num){
         for (int m=0;m<n+1;m++){
             N[k] = n;
             M[k] = m;
-//            cout<<'\n'<<n<<'\t'<<m<<'\t'<<N[k]<<'\t'<<M[k];
             k++;
         }
     }
 
+    int* dev_M;
+    int* dev_N;
+
+    CUDA_CALL(cudaMalloc((void**) &dev_N, sizeof(int) * N_coeff));
+    CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
     CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
-
-    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
-
-//    free(M);
-//    free(N);
+    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
+    CUDA_CALL(cudaFree(dev_M));
+    CUDA_CALL(cudaFree(dev_N));
 }
 
 
