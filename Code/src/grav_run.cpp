@@ -143,6 +143,7 @@ void time_profile_gpu(bool verbose, float * res){
 
 	free_gpu_memory();
 	free_gpu_memory1();
+
 	START_TIMER();
 		cuda_cpy_input_data();
 		cuda_cpy_input_data1();
@@ -393,7 +394,7 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
 	export_csv(faces, "results/vertices.csv", "results/cpu_edges.csv", verbose);
 	// export_csv(gpu_out_faces, "results/vertices.csv", "results/gpu_edges.csv", verbose);
 	free_cpu_memory();
-	free_gpu_memory();
+	free_gpu_memory1();
 
 }
 
