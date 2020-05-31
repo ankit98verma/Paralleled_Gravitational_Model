@@ -114,8 +114,8 @@ void time_profile_cpu(bool verbose, float * res){
  *
  * Return Values:   GPU computational time
 *******************************************************************************/
-void time_profile_gpu(int thread_num, bool verbose, float * res){
-	
+void time_profile_gpu(bool verbose, float * res){
+
 	float gpu_time_icosphere = 0, gpu_time_icosphere2 = 0;
 	float gpu_time_indata_cpy = 0;
 	float gpu_time_outdata_cpy = 0;
@@ -127,10 +127,11 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
 
 	START_TIMER();
 		cuda_cpy_input_data();
+		cuda_cpy_input_data1();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
 	START_TIMER();
-		cudacall_icosphere_naive(thread_num);
+		cudacall_icosphere_naive(1024);
 	STOP_RECORD_TIMER(gpu_time_icosphere);
 	err = cudaGetLastError();
     if (cudaSuccess != err){
@@ -141,12 +142,14 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
     }
 
 	free_gpu_memory();
+	free_gpu_memory1();
 	START_TIMER();
 		cuda_cpy_input_data();
+		cuda_cpy_input_data1();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
 	START_TIMER();
-		cudacall_icosphere(thread_num);
+		cudacall_icosphere(1024);
 	STOP_RECORD_TIMER(gpu_time_icosphere2);
 	err = cudaGetLastError();
     if (cudaSuccess != err){
@@ -155,10 +158,10 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
     	if(verbose)
         	cerr << "No kernel error detected" << endl;
     }
-    
+
     float tmp = 0;
     START_TIMER();
-    	cudacall_sort(thread_num);
+    	cudacall_sort(1024);
     STOP_RECORD_TIMER(tmp);
 	err = cudaGetLastError();
     if (cudaSuccess != err){
@@ -168,16 +171,16 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
         	cerr << "No kernel error detected" << endl;
     }
 
-//    START_TIMER();
-////        optimal_cudacall_gravitational(thread_num);
-//        naive_cudacall_gravitational(thread_num);
-//    STOP_RECORD_TIMER(naive_gpu_time_gravitational);
-
-    // COMPUTING GRAVITATIONAL POTENTIAL
     START_TIMER();
-        optimal_cudacall_gravitational(thread_num);
-//        naive_cudacall_gravitational(thread_num);
-    STOP_RECORD_TIMER(gpu_time_gravitational);
+//        optimal_cudacall_gravitational(512);
+        naive_cudacall_gravitational(512);
+    STOP_RECORD_TIMER(naive_gpu_time_gravitational);
+
+//    // COMPUTING GRAVITATIONAL POTENTIAL
+//    START_TIMER();
+//        optimal_cudacall_gravitational(512);
+////        naive_cudacall_gravitational(512);
+//    STOP_RECORD_TIMER(gpu_time_gravitational);
 
 
 
@@ -191,6 +194,7 @@ void time_profile_gpu(int thread_num, bool verbose, float * res){
 
 	START_TIMER();
 		cuda_cpy_output_data();
+		cuda_cpy_output_data1();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
 	if(verbose){
@@ -332,21 +336,15 @@ void export_tmp(){
  *                  compatible .mat file
  *
  * Arguments:       int depth - needed for icosphere calculation
- *                  int thread_num - number of threads per block
  *                  float radius - radius of the sphere
  *                  bool verbose: If true then it will prints messages on the c
  *                  console
  *
  * Return Values:   none
 *******************************************************************************/
-void run(int depth, int thread_num, float radius, bool verbose, float * cpu_res, float * gpu_res){
+void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res){
 
 
-	if(thread_num > 1024){
-		cout << "Thread per block exceeds its maximum limit of 1024.\n Using 1024 threads per block" << endl;
-	}
-	if(verbose)
-		cout << "\nThread per block:"<< thread_num << endl;
 
 	init_vars(depth, radius);
 	allocate_cpu_mem(verbose);
@@ -360,7 +358,7 @@ void run(int depth, int thread_num, float radius, bool verbose, float * cpu_res,
 
 	if(verbose)
 		cout << "\n----------Running GPU Code----------\n" << endl;
-	time_profile_gpu(thread_num, verbose, gpu_res);
+	time_profile_gpu(verbose, gpu_res);
 
 //	 if(verbose)
 //	 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
@@ -428,7 +426,7 @@ int main(int argc, char **argv) {
 
 	float cpu_times[2],gpu_times[2];
 
-	run(len, 256, 1, (bool)atoi(argv[2]), cpu_times, gpu_times);
+	run(len, 1, (bool)atoi(argv[2]), cpu_times, gpu_times);
 
 
     return 1;
