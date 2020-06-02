@@ -31,6 +31,7 @@ int * pointers_inds[2];
 int ind2_inds;
 int * dev_face_vert_ind;
 int * dev_face_vert_ind_res;
+int * dev_face_vert_ind_holder;
 
 
 float * pointers_sums[2];
@@ -50,6 +51,7 @@ void cuda_cpy_input_data(){
 
     CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind, 3*faces_length * sizeof(int)));
     CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind_res, 3*faces_length * sizeof(int)));
+    CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind_holder, 3*faces_length * sizeof(int)));
 
     CUDA_CALL(cudaMalloc((void **)&dev_face_sums, 3*faces_length * sizeof(float)));
     CUDA_CALL(cudaMalloc((void**) &dev_face_sums_res, 3*faces_length* sizeof(float)));
@@ -84,6 +86,7 @@ void free_gpu_memory(){
 
     CUDA_CALL(cudaFree(dev_face_vert_ind));
     CUDA_CALL(cudaFree(dev_face_vert_ind_res));
+    CUDA_CALL(cudaFree(dev_face_vert_ind_holder));
 
     CUDA_CALL(cudaFree(dev_face_sums));
     CUDA_CALL(cudaFree(dev_face_sums_res));
@@ -463,7 +466,27 @@ void kernal_count_shifts(int * inds, int * inds_res, int length){
 }
 
 __global__
-void kernal_prefix_sum(int * inds, int length){
+void kernal_prefix_sum(int * inds, int * inds_res, int length, const unsigned int stride){
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+    
+    int i;
+    while(idx < length){
+        // find the end location
+        i = idx-stride;
+        if(i >= 0){
+            inds_res[idx] = inds[idx] + inds[i];
+        }else{
+            inds_res[idx] = inds[idx];
+        }
+        
+        idx += numthrds;
+    }
+}
+
+
+__global__
+void kernal_prefix_sum_n(int * inds, int length){
     // unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     // const unsigned int numthrds = blockDim.x * gridDim.x;
     
@@ -479,7 +502,7 @@ void kernal_prefix_sum(int * inds, int length){
 }
 
 __global__ 
-void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shifts, int length, int out_length, float radius){
+void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shifts, int length, float radius){
     
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -489,19 +512,18 @@ void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shift
 
         if(inds[idx] != -1){
             index = idx - shifts[idx];
-            if(index < out_length)
-                tmp = v_in[idx];
-                scale = radius/sqrtf(tmp.x*tmp.x + tmp.y*tmp.y + tmp.z*tmp.z);
-                tmp.x *= scale;
-                tmp.y *= scale;
-                tmp.z *= scale;
-                v_out[index] = tmp;
-
-            
+            tmp = v_in[idx];
+            scale = radius/sqrtf(tmp.x*tmp.x + tmp.y*tmp.y + tmp.z*tmp.z);
+            tmp.x *= scale;
+            tmp.y *= scale;
+            tmp.z *= scale;
+            v_out[index] = tmp;   
         }
         idx += numthrds;
     }
 }
+
+
 
 void cudacall_sort(int thread_num) {
     
@@ -509,13 +531,11 @@ void cudacall_sort(int thread_num) {
     int n_blocks = min(65535, (len + thread_num  - 1) / thread_num);
 
     unsigned int l = ceil(log2(len)), ind1;
-
     for(int i=0; i<l; i++){
         ind1 = i%2;
         ind2_sums = (i+1)%2;
         ind2_inds = ind2_sums;
         unsigned int r = pow(2, i+1);
-        // kernal_merge_navie_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
         kernal_merge_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
 
     }
@@ -543,46 +563,56 @@ void cudacall_sort(int thread_num) {
                             ((vertex *)pointers[ind2_faces], pointers_sums[ind2_sums], pointers_inds[ind2_inds], pointers_inds[out], len);
     ind2_inds = out;
 
+    int * markers = pointers_inds[ind2_inds];
+
     // count the shift required.
     out  = (ind2_inds + 1)%2;
     kernal_count_shifts<<<n_blocks, thread_num>>>
                             (pointers_inds[ind2_inds], pointers_inds[out], len);
+    pointers_inds[ind2_inds] = dev_face_vert_ind_holder;
     ind2_inds = out;
 
+    // kernal_prefix_sum_n<<<1, 1 >>>(pointers_inds[ind2_inds], len);
     // commutate the shifts required.
-    kernal_prefix_sum<<<1, 1>>>
-                            (pointers_inds[ind2_sums], len);
+    l = ceil(log2(len));
+    // l = 1;
+    ind1 = ind2_inds-1;
+    for(int i=0; i<l; i++){
+        ind1 = (1+ind1)%2;
+        ind2_inds = (ind2_inds+1)%2;
+        unsigned int r = pow(2, i);
+        kernal_prefix_sum<<<n_blocks, thread_num>>>(pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
+    }
     
     // fill the vertices now
-    kernal_fill_vertices<<<n_blocks, thread_num>>>
-        ((vertex *) pointers[ind2_faces], dev_vertices_ICO, pointers_inds[(ind2_inds+1)%2], pointers_inds[ind2_inds], len, vertices_length, radius);
+    kernal_fill_vertices<<<n_blocks, thread_num>>>((vertex *) pointers[ind2_faces], dev_vertices_ICO, markers, pointers_inds[ind2_inds], len, radius);
     
-    int tmp[len];
+    // int tmp[len];
     
     // export the shift:
-    CUDA_CALL(cudaMemcpy(tmp, pointers_inds[ind2_inds], len*sizeof(int), cudaMemcpyDeviceToHost));
-    cout << "Exporting: shifts.csv"<<endl;
-    string filename1 = "results/shifts.csv";
-    ofstream obj_stream;
-    obj_stream.open(filename1);
-    // obj_stream << "results/inds.csv" << endl;
-    cout <<"-----------------------" << endl;
-    for(unsigned int i=0; i< 3*faces_length; i++){
-        obj_stream << tmp[i] << endl;
-    }
-    obj_stream.close();
+    // CUDA_CALL(cudaMemcpy(tmp, pointers_inds[ind2_inds], len*sizeof(int), cudaMemcpyDeviceToHost));
+    // cout << "Exporting: shifts.csv"<<endl;
+    // string filename1 = "results/shifts.csv";
+    // ofstream obj_stream;
+    // obj_stream.open(filename1);
+    // // obj_stream << "results/inds.csv" << endl;
+    // cout <<"-----------------------" << endl;
+    // for(unsigned int i=0; i< 3*faces_length; i++){
+    //     obj_stream << tmp[i] << endl;
+    // }
+    // obj_stream.close();
 
-    // export the inds:
-    CUDA_CALL(cudaMemcpy(tmp, pointers_inds[(ind2_inds+1)%2], len*sizeof(int), cudaMemcpyDeviceToHost));
-    cout << "Exporting: inds.csv"<<endl;
-    ofstream obj;
-    obj.open("results/inds.csv");
-    // obj_stream << "results/sums" << endl;
-    cout <<"-----------------------" << endl;
-    for(unsigned int i=0; i< 3*faces_length; i++){
-        obj << tmp[i] << endl;
-    }
-    obj.close();
+    // // export the markers:
+    // CUDA_CALL(cudaMemcpy(tmp, markers, len*sizeof(int), cudaMemcpyDeviceToHost));
+    // cout << "Exporting: markers.csv"<<endl;
+    // ofstream obj;
+    // obj.open("results/inds.csv");
+    // // obj_stream << "results/sums" << endl;
+    // cout <<"-----------------------" << endl;
+    // for(unsigned int i=0; i< 3*faces_length; i++){
+    //     obj << tmp[i] << endl;
+    // }
+    // obj.close();
 
 }
 
