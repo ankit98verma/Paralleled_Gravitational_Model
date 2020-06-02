@@ -89,6 +89,7 @@ void time_profile_cpu(bool verbose, float * res){
 
 	cout << "Fill vertex in cpu" << endl;
 	START_TIMER();
+		
 		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
 
@@ -322,7 +323,7 @@ void export_tmp(){
 
 	cout << "Exporting: gpu_sorted_vertices.csv"<<endl;
 
-	string filename1 = "gpu_sorted_vertices.csv";
+	string filename1 = "results/gpu_sorted_vertices.csv";
 	ofstream obj_stream;
 	obj_stream.open(filename1);
 	obj_stream << "x, y, z" << endl;
@@ -332,6 +333,18 @@ void export_tmp(){
 		obj_stream << v[i].x << ", " << v[i].y << ", " << v[i].z << endl;
 	}
 	obj_stream.close();
+    
+    cout << "Exporting: gpu_vertices.csv"<<endl;
+
+    string filename2 = "results/gpu_vertices.csv";
+    ofstream obj_stream2;
+    obj_stream2.open(filename2);
+    obj_stream2 << "x, y, z" << endl;
+    cout <<"-----------------------" << endl;
+    for(unsigned int i=0; i< vertices_length; i++){
+        obj_stream2 << gpu_out_vertices[i].x <<", "<< gpu_out_vertices[i].y <<", "<< gpu_out_vertices[i].z  << endl;
+    }
+    obj_stream2.close();
 }
 /*******************************************************************************
  * Function:        run
@@ -394,7 +407,7 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
 		cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 
     // output_potential(verbose);
-	// export_csv(faces, "results/vertices.csv", "results/cpu_edges.csv", verbose);
+	export_csv(faces, "results/cpu_vertices.csv", "results/cpu_edges.csv", verbose);
 	// export_csv(gpu_out_faces, "results/vertices.csv", "results/gpu_edges.csv", verbose);
 	free_cpu_memory();
 	free_gpu_memory1();

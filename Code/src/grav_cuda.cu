@@ -20,6 +20,8 @@
 #include <curand.h>
 using namespace std;
 
+#define EPSILON     1E-6
+
 int ind2_faces;
 triangle * pointers[2];
 triangle * dev_faces_in;
@@ -36,7 +38,7 @@ int ind2_sums;
 float * dev_face_sums;
 float * dev_face_sums_res;
 
-triangle * dev_verties;
+vertex * dev_vertices_ICO;
 
 __global__ void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length);
 __global__ void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length);
@@ -52,6 +54,8 @@ void cuda_cpy_input_data(){
     CUDA_CALL(cudaMalloc((void **)&dev_face_sums, 3*faces_length * sizeof(float)));
     CUDA_CALL(cudaMalloc((void**) &dev_face_sums_res, 3*faces_length* sizeof(float)));
 
+    CUDA_CALL(cudaMalloc((void**) &dev_vertices_ICO, vertices_length * sizeof(vertex)));
+
     CUDA_CALL(cudaMemcpy(dev_faces_in, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
 
     ind2_faces = 0;
@@ -65,10 +69,13 @@ void cuda_cpy_input_data(){
     ind2_inds = 0;
     pointers_inds[0] = dev_face_vert_ind;
     pointers_inds[1] = dev_face_vert_ind_res;
+
+    gpu_out_vertices = (vertex *) malloc(vertices_length*sizeof(vertex));
 }
 
 void cuda_cpy_output_data(){
     CUDA_CALL(cudaMemcpy(gpu_out_faces, pointers[ind2_faces], faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(gpu_out_vertices, dev_vertices_ICO, vertices_length*sizeof(vertex), cudaMemcpyDeviceToHost));
 }
 
 void free_gpu_memory(){
@@ -80,7 +87,11 @@ void free_gpu_memory(){
 
     CUDA_CALL(cudaFree(dev_face_sums));
     CUDA_CALL(cudaFree(dev_face_sums_res));
+
+    CUDA_CALL(cudaFree(dev_vertices_ICO));
+
     free(gpu_out_faces);
+    free(gpu_out_vertices);
 }
 
 
@@ -181,18 +192,19 @@ __device__ func_ptr_sub_triangle_t funcs2[4] = {sub_triangle_top, sub_triangle_l
 
 
 __global__ void refine_icosphere_kernal(triangle * faces, float * sums, const float radius, const unsigned int th_len, triangle * faces_out) {
-        unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const unsigned int numthrds = blockDim.x * gridDim.x;
 
     vertex v_tmp[3];
+    triangle v;
 
     while(idx < 4*th_len){
         int tri_ind = idx/4;
         int sub_tri_ind = idx%4;
+        v = faces[tri_ind];
+        break_triangle(v, v_tmp, radius);
 
-        break_triangle(faces[tri_ind], v_tmp, radius);
-
-        funcs2[sub_tri_ind](faces[tri_ind], v_tmp, &faces_out[idx]);
+        funcs2[sub_tri_ind](v, v_tmp, &faces_out[idx]);
 
         idx += numthrds;
     }
@@ -386,6 +398,111 @@ void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, c
 
 }
 
+__global__
+void kernal_mark_duplicates(vertex * v, float * sums, int * ind, int * ind_res, int length){
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+    
+    vertex v1, v2; int flag;
+    int start, end; float tmp;
+    while(idx < length){
+        // find the end location
+        end = idx + 1;
+
+        while(abs(sums[end] - sums[idx]) < EPSILON && end < length){
+            end++;
+        }
+        v1 = v[idx];
+        flag = 1;
+        start = idx+1;
+        while(start < end){
+            // check if vertices are same or not
+            v2 = v[start];
+            tmp = abs(v1.x - v2.x) + abs(v1.y - v2.y) + abs(v1.z - v2.z); 
+            if(tmp < 3*EPSILON){
+                flag = 0;
+                ind_res[idx] = -1;
+                break;
+            }
+            start++;
+        }
+        if(flag==1){
+            ind_res[idx] = idx;
+        }
+        idx += numthrds;
+    }
+}
+
+__global__
+void kernal_count_shifts(int * inds, int * inds_res, int length){
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+    
+    int i, j;
+    while(idx < length){
+        // find the end location
+        
+        if(inds[idx] == -1){
+            inds_res[idx] = 0; 
+        }
+        else{
+            i = idx - 1;
+            j=0;
+            while(i >= 0){
+                i--;
+                j++;
+                if(inds[i] != -1){
+                    break;
+                }
+            }
+            inds_res[idx] = j;
+        }
+        
+        idx += numthrds;
+    }
+}
+
+__global__
+void kernal_prefix_sum(int * inds, int length){
+    // unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // const unsigned int numthrds = blockDim.x * gridDim.x;
+    
+    int i=1;
+    while(i < length){
+        // find the end location
+        inds[i] += inds[i-1];
+        i++;
+        
+        
+        // idx += numthrds;
+    }
+}
+
+__global__ 
+void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shifts, int length, int out_length, float radius){
+    
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+    
+    int index;vertex tmp; float scale;
+    while(idx < length){
+
+        if(inds[idx] != -1){
+            index = idx - shifts[idx];
+            if(index < out_length)
+                tmp = v_in[idx];
+                scale = radius/sqrtf(tmp.x*tmp.x + tmp.y*tmp.y + tmp.z*tmp.z);
+                tmp.x *= scale;
+                tmp.y *= scale;
+                tmp.z *= scale;
+                v_out[index] = tmp;
+
+            
+        }
+        idx += numthrds;
+    }
+}
+
 void cudacall_sort(int thread_num) {
     
     unsigned int len = 3*faces_length;
@@ -405,7 +522,6 @@ void cudacall_sort(int thread_num) {
 
     // now sort the chunks of 1024 floats
     l = ceil(log2(n_blocks));
-    cout << "l: "<< l << endl;
     for(int i=0; i<l; i++){
         ind1 = (ind1+1)%2;
         ind2_sums = (ind2_sums+1)%2;
@@ -414,28 +530,60 @@ void cudacall_sort(int thread_num) {
         kernal_merge_chuncks<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
     }
 
-    // CUDA_CALL(cudaMemcpy(sums, pointers_sums[ind2_sums], len*sizeof(float), cudaMemcpyDeviceToHost));
-    // CUDA_CALL(cudaMemcpy(tmp, pointers_inds[ind2_inds], len*sizeof(int), cudaMemcpyDeviceToHost));
-
-    // export the sum:
-    // cout << "Exporting: sums.csv"<<endl;
-
-    // string filename1 = "sums.csv";
-    // ofstream obj_stream;
-    // obj_stream.open(filename1);
-    // obj_stream << "sums" << endl;
-    // cout <<"-----------------------" << endl;
-    // for(unsigned int i=0; i< 3*faces_length; i++){
-    //     obj_stream << sums[i] << endl;
-    // }
-    // obj_stream.close();
-    
-    // working
+    // update the vertices position
     n_blocks = std::min(65535, ((int)len + thread_num  - 1) / thread_num);
     int out = (ind2_faces + 1) %2;
     kernal_update_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2_faces], (vertex *)pointers[out], pointers_inds[ind2_inds], len);
     cudaDeviceSynchronize();
     ind2_faces = out;
+
+    // mark the duplicate vertices
+    out  = (ind2_inds + 1)%2;
+    kernal_mark_duplicates<<<n_blocks, thread_num>>>
+                            ((vertex *)pointers[ind2_faces], pointers_sums[ind2_sums], pointers_inds[ind2_inds], pointers_inds[out], len);
+    ind2_inds = out;
+
+    // count the shift required.
+    out  = (ind2_inds + 1)%2;
+    kernal_count_shifts<<<n_blocks, thread_num>>>
+                            (pointers_inds[ind2_inds], pointers_inds[out], len);
+    ind2_inds = out;
+
+    // commutate the shifts required.
+    kernal_prefix_sum<<<1, 1>>>
+                            (pointers_inds[ind2_sums], len);
+    
+    // fill the vertices now
+    kernal_fill_vertices<<<n_blocks, thread_num>>>
+        ((vertex *) pointers[ind2_faces], dev_vertices_ICO, pointers_inds[(ind2_inds+1)%2], pointers_inds[ind2_inds], len, vertices_length, radius);
+    
+    int tmp[len];
+    
+    // export the shift:
+    CUDA_CALL(cudaMemcpy(tmp, pointers_inds[ind2_inds], len*sizeof(int), cudaMemcpyDeviceToHost));
+    cout << "Exporting: shifts.csv"<<endl;
+    string filename1 = "results/shifts.csv";
+    ofstream obj_stream;
+    obj_stream.open(filename1);
+    // obj_stream << "results/inds.csv" << endl;
+    cout <<"-----------------------" << endl;
+    for(unsigned int i=0; i< 3*faces_length; i++){
+        obj_stream << tmp[i] << endl;
+    }
+    obj_stream.close();
+
+    // export the inds:
+    CUDA_CALL(cudaMemcpy(tmp, pointers_inds[(ind2_inds+1)%2], len*sizeof(int), cudaMemcpyDeviceToHost));
+    cout << "Exporting: inds.csv"<<endl;
+    ofstream obj;
+    obj.open("results/inds.csv");
+    // obj_stream << "results/sums" << endl;
+    cout <<"-----------------------" << endl;
+    for(unsigned int i=0; i< 3*faces_length; i++){
+        obj << tmp[i] << endl;
+    }
+    obj.close();
+
 }
 
 
@@ -446,6 +594,7 @@ void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsign
 
     while(idx < vertices_length){
         f_out[idx] = f_in[inds[idx]];
+        inds[idx] = idx;
         idx += numthrds;
     }
 }

@@ -23,7 +23,7 @@ using namespace std;
 // variables local to this file
 float* dev_coeff;
 float* dev_potential;
-vertex* dev_vertices;
+// vertex* dev_vertices;
 
 
 void cuda_cpy_input_data1(){
