@@ -82,14 +82,17 @@ void time_profile_cpu(bool verbose, float * res){
 	float cpu_time_fill_vertices_ms = 0;
 	float cpu_time_grav_pot_ms = 0;
 
+	cout << "cout in cpu" << endl;
 	START_TIMER();
 		create_icoshpere();
 	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
 
+	cout << "Fill vertex in cpu" << endl;
 	START_TIMER();
 		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
 
+	cout << "Grav potential in cpu" << endl;
 	START_TIMER();
     	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
