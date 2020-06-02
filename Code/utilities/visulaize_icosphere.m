@@ -36,7 +36,11 @@ v = vertices.x + vertices.y+ vertices.z;
 % diffs(abs(diffs) < 0.009) =     0;
 
 % writematrix(v, 'sum.csv')
-plot(v);
+plot(vertices.x);
+hold on;
+plot(vertices.y);
+plot(vertices.z);
+legend()
 % sums= readtable('sums.csv');  % skips the first three rows of data
 % plot(sums.sums);
 

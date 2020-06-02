@@ -353,7 +353,6 @@ void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, c
     int arr_ind_L, arr_ind_HE, final_index;
     
     while(idx < length){
-        final_index = idx;
         k = idx % r;
         local_k = k%stride;
         arr_ind_L = idx - local_k + stride;    // arr2 
@@ -362,11 +361,11 @@ void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, c
         if(k < stride && arr_ind_L < length){
             // an arr 1 element
             arr_len = min(stride, length - arr_ind_L);
-            arr_start = idx - local_k;
+            arr_start = idx - local_k + 1;
 
             get_last_smallest(&sums[arr_ind_L], arr_len, sums[idx], tmp_res);
 
-            final_index = local_k + tmp_res[0] + 1 + arr_start;
+            final_index = local_k + tmp_res[0] + arr_start;
 
         }else if( k>=stride && 0 <= arr_ind_HE){
             // an arr 2 element
@@ -376,13 +375,10 @@ void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, c
             get_first_greatest(&sums[arr_ind_HE], arr_len, sums[idx], tmp_res);
             
             final_index = local_k + tmp_res[0] + arr_start;
-        }else{
-            res[idx] = -1;
         }
         
-        res[final_index] = sums[idx];
         // now place the element
-        // res[final_index] = sums[idx];
+        res[final_index] = sums[idx];
         ind_res[final_index] = ind[idx];
         
         idx += numthrds;
@@ -391,23 +387,8 @@ void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, c
 }
 
 void cudacall_sort(int thread_num) {
-
-    // generate the random numbers for sums
-
-    // init the generator 
-    curandGenerator_t gen;
-    curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
-
-    // set seed
-    curandSetPseudoRandomGeneratorSeed(gen, 1234ULL);
-
-    unsigned int len = 3*faces_length;
-    // float sums[len];
     
-    // generate random numbers
-    // curandGenerateUniform(gen, pointers_sums[0], len);
-
-
+    unsigned int len = 3*faces_length;
     int n_blocks = min(65535, (len + thread_num  - 1) / thread_num);
 
     unsigned int l = ceil(log2(len)), ind1;
@@ -430,7 +411,6 @@ void cudacall_sort(int thread_num) {
         ind2_sums = (ind2_sums+1)%2;
         ind2_inds = ind2_sums;
         unsigned int r = pow(2, i+1)*1024;
-        // kernal_merge_navie_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
         kernal_merge_chuncks<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
     }
 
@@ -449,16 +429,13 @@ void cudacall_sort(int thread_num) {
     //     obj_stream << sums[i] << endl;
     // }
     // obj_stream.close();
-
+    
     // working
     n_blocks = std::min(65535, ((int)len + thread_num  - 1) / thread_num);
     int out = (ind2_faces + 1) %2;
     kernal_update_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2_faces], (vertex *)pointers[out], pointers_inds[ind2_inds], len);
     cudaDeviceSynchronize();
     ind2_faces = out;
-
-    // destroy random generator
-    curandDestroyGenerator(gen);
 }
 
 
