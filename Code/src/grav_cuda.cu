@@ -17,6 +17,7 @@
 #include <fstream>
 #include <iostream>
 #include <math.h>
+#include <curand.h>
 using namespace std;
 
 int ind2_faces;
@@ -37,6 +38,8 @@ float * dev_face_sums_res;
 
 triangle * dev_verties;
 
+__global__ void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length);
+__global__ void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length);
 
 void cuda_cpy_input_data(){
     gpu_out_faces = (triangle *)malloc(faces_length*sizeof(triangle));
@@ -66,7 +69,7 @@ void cuda_cpy_input_data(){
 
 void cuda_cpy_output_data(){
     CUDA_CALL(cudaMemcpy(gpu_out_faces, pointers[ind2_faces], faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
-    }
+}
 
 void free_gpu_memory(){
     CUDA_CALL(cudaFree(dev_faces_in));
@@ -196,19 +199,6 @@ __global__ void refine_icosphere_kernal(triangle * faces, float * sums, const fl
 
 }
 
-
-__global__
-void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length){
-    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    const unsigned int numthrds = blockDim.x * gridDim.x;
-
-    while(idx < vertices_length){
-        sums[idx] = vs[idx].x + vs[idx].y + vs[idx].z;
-        inds[idx] = idx;
-        idx += numthrds;
-    }
-}
-
 void cudacall_icosphere(int thread_num) {
 	// each thread creates a sub triangle
 	int ths, n_blocks, ind1;
@@ -224,6 +214,17 @@ void cudacall_icosphere(int thread_num) {
     kernal_fill_sums_inds<<<n_blocks, thread_num>>>((vertex *)pointers[ind2_faces], dev_face_sums, dev_face_vert_ind, len);
 }
 
+__global__
+void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length){
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+
+    while(idx < vertices_length){
+        sums[idx] = vs[idx].x + vs[idx].y + vs[idx].z;
+        inds[idx] = idx;
+        idx += numthrds;
+    }
+}
 
 __device__
 void dev_merge(float * s, float * r, int * ind, int * ind_res, unsigned int idx, unsigned int start, unsigned int end){
@@ -304,37 +305,87 @@ void kernal_merge_sort(float * sums, float * res, int * ind, int * ind_res, cons
     }
 }
 
-// doesn't work
-__global__
-void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
+__device__
+void binary_search(float * arr, int len, float a, unsigned int * res_ind){
+    int L = 0;
+    int R = len-1;
+    int M = 0;
+    // while(L <= R){
+    //     M = (L + R)/2;
+    //     if(arr[M] > a){
+    //         R = M-1;
+    //     }
+    //     else{
+    //         L = M+1;
+    //     }
+    // }
+    // res_ind[0] = L;
 
-    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    const unsigned int numthrds = blockDim.x * gridDim.x;
-
-    const unsigned int stride = r/2;
-
-    unsigned int id;
-    while(idx*r < length){
-        id = idx*r;
-        dev_merge(sums, res, ind, ind_res, id, min(length, id + stride), min(length, id+r));
-        idx += numthrds;
+    while(L < R){
+        M = (L + R)/2;
+        if(a <= arr[M]){
+            R = M;
+        }
+        else{
+            L = M+1;
+        }
     }
+    res_ind[0] = R;
 }
 
 __global__
-void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length){
+void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
+    
     unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
     const unsigned int numthrds = blockDim.x * gridDim.x;
+    const int stride = r/2;
+    
+    unsigned int binary_res_ind[1];
+    unsigned int k;
+    unsigned int arr_len;
+    unsigned int arr_ind_L, arr_ind_HE, ind_passed;
+    
+    while(idx < length){
+        binary_res_ind[0] = idx;
+        k = idx % r;
+        arr_ind_L = idx - k%stride + stride;
+        arr_ind_HE = idx - k%stride - stride;
 
-    while(idx < vertices_length){
-        f_out[idx] = f_in[inds[idx]];
+        if(k < stride && arr_ind_L < length){
+            ind_passed = arr_ind_L;
+        }else if( k>=stride && arr_ind_HE < length){
+            ind_passed = arr_ind_HE;
+        }
+        arr_len = min(stride, length - ind_passed);
+        binary_search(&sums[ind_passed], arr_len, sums[idx], binary_res_ind);
+
+        // now place the element
+        res[idx + binary_res_ind[0]] = sums[idx];
+        ind_res[idx + binary_res_ind[0]] = ind[idx];
+        
         idx += numthrds;
     }
+
 }
 
 void cudacall_sort(int thread_num) {
 
+    // generate the random numbers for sums
+
+    // init the generator 
+    curandGenerator_t gen;
+    curandCreateGenerator(&gen, CURAND_RNG_PSEUDO_DEFAULT);
+
+    // set seed
+    curandSetPseudoRandomGeneratorSeed(gen, 1234ULL);
+
     unsigned int len = 3*faces_length;
+    float sums[len];
+    
+    // generate random numbers
+    curandGenerateUniform(gen, pointers_sums[0], len);
+
+
     int n_blocks = min(65535, (len + thread_num  - 1) / thread_num);
 
     unsigned int l = ceil(log2(len)), ind1;
@@ -351,16 +402,33 @@ void cudacall_sort(int thread_num) {
 
     // now sort the chunks of 1024 floats
     l = ceil(log2(n_blocks));
+    cout << "l: "<< l << endl;
     for(int i=0; i<l; i++){
         ind1 = (ind1+1)%2;
         ind2_sums = (ind2_sums+1)%2;
         ind2_inds = ind2_sums;
         unsigned int r = pow(2, i+1)*1024;
         kernal_merge_navie_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
+        // kernal_merge_chuncks<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
     }
 
-    // CUDA_CALL(cudaMemcpy(sums, pointers_sums[ind2_sums], len*sizeof(float), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(sums, pointers_sums[ind2_sums], len*sizeof(float), cudaMemcpyDeviceToHost));
     // CUDA_CALL(cudaMemcpy(tmp, pointers_inds[ind2_inds], len*sizeof(int), cudaMemcpyDeviceToHost));
+
+    // export the sum:
+    cout << "Exporting: sums.csv"<<endl;
+
+    string filename1 = "sums.csv";
+    ofstream obj_stream;
+    obj_stream.open(filename1);
+    obj_stream << "sums" << endl;
+    cout <<"-----------------------" << endl;
+    for(unsigned int i=0; i< 3*faces_length; i++){
+        obj_stream << sums[i] << endl;
+    }
+    obj_stream.close();
+
+
 
     // working
     n_blocks = std::min(65535, ((int)len + thread_num  - 1) / thread_num);
@@ -368,5 +436,19 @@ void cudacall_sort(int thread_num) {
     kernal_update_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2_faces], (vertex *)pointers[out], pointers_inds[ind2_inds], len);
     cudaDeviceSynchronize();
     ind2_faces = out;
+
+    // destroy random generator
+    curandDestroyGenerator(gen);
 }
 
+
+__global__
+void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length){
+    unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const unsigned int numthrds = blockDim.x * gridDim.x;
+
+    while(idx < vertices_length){
+        f_out[idx] = f_in[inds[idx]];
+        idx += numthrds;
+    }
+}

@@ -172,10 +172,10 @@ void time_profile_gpu(bool verbose, float * res){
         	cerr << "No kernel error detected" << endl;
     }
 
-    START_TIMER();
+    // START_TIMER();
 //        optimal_cudacall_gravitational(512);
-        naive_cudacall_gravitational(512);
-    STOP_RECORD_TIMER(naive_gpu_time_gravitational);
+        // naive_cudacall_gravitational(512);
+    // STOP_RECORD_TIMER(naive_gpu_time_gravitational);
 
 //    // COMPUTING GRAVITATIONAL POTENTIAL
 //    START_TIMER();
@@ -370,9 +370,9 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
 	export_tmp();
 //	/************************************************************/
 
-	 if(verbose)
-	 	cout << "\n----------Verifying GPU Potential ----------\n" << endl;
-	 verify_gpu_potential(verbose);
+	 // if(verbose)
+	 // 	cout << "\n----------Verifying GPU Potential ----------\n" << endl;
+	 // verify_gpu_potential(verbose);
 
 	float cpu_time = cpu_res[0] +  cpu_res[1];
 	float gpu_time = gpu_res[0] +  gpu_res[1];
@@ -391,7 +391,7 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
 		cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
 
     // output_potential(verbose);
-	export_csv(faces, "results/vertices.csv", "results/cpu_edges.csv", verbose);
+	// export_csv(faces, "results/vertices.csv", "results/cpu_edges.csv", verbose);
 	// export_csv(gpu_out_faces, "results/vertices.csv", "results/gpu_edges.csv", verbose);
 	free_cpu_memory();
 	free_gpu_memory1();

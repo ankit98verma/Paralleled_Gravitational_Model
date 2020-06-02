@@ -270,7 +270,7 @@ void export_csv(triangle * f, string filename1, string filename2, bool verbose){
 }
 
 void fill_vertices(){
-	vertex * all_vst = (vertex *)faces;
+	// vertex * all_vst = (vertex *)faces;
 	
 	quickSort((void *)faces, 0, 3*faces_length-1, partition_sum);
 	

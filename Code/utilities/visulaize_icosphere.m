@@ -35,14 +35,8 @@ v = vertices.x + vertices.y+ vertices.z;
 % diffs = v(1:end-1)-v(2:end);
 % diffs(abs(diffs) < 0.009) =     0;
 
-writematrix(v, 'sum.csv')
-plot(v);
-
-% inds = find(diffs); 
-% inds = inds/1024;
-% figure();
-% writematrix(inds, 'inds.csv')
-% plot(inds(1:end-1)-inds(2:end))
-
-
+% writematrix(v, 'sum.csv')
+% plot(v);
+sums= readtable('sums.csv');  % skips the first three rows of data
+plot(sums.sums);
 
