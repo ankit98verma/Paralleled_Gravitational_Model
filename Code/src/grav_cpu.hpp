@@ -22,12 +22,14 @@ using std::string;
 #endif
 
 #define	PI			3.1415926f
-#define R_eq    	1
-#define mhu 		1 // in km^3/s^2
+#define EPSILON     1E-6
+#define EPSILON_POT 1E-7
 #define ICOSPHERE_INIT_FACE_LEN		20
 
-#define N_SPHERICAL 				20
-#define N_coeff (N_SPHERICAL+1)*(N_SPHERICAL+2)/2
+#define R_eq    		1
+#define mhu 			1 // in km^3/s^2
+#define N_SPHERICAL 	20
+#define N_coeff 		(N_SPHERICAL+1)*(N_SPHERICAL+2)/2
 
 typedef long long int intL;
 struct vertex
@@ -66,10 +68,6 @@ GLOBAL float radius;
 /**** Variables related to gravitational potential ****/
 GLOBAL float coeff[N_SPHERICAL+1][N_SPHERICAL+2];
 GLOBAL float * potential;
-
-/**** General use variables ****/
-GLOBAL float epsilon;
-GLOBAL float epsilon_pot;
 
 void init_vars(unsigned int depth, float r);
 void allocate_cpu_mem(bool verbose);

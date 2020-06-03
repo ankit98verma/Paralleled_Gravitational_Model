@@ -394,17 +394,17 @@ void verify_gpu_icosphere(bool verbose){
 	vertex * gpu_out_v = (vertex *)gpu_out_faces;
 	bool success = true;
     for (unsigned int i=0; i<3*faces_length; i++){
-        if (fabs(gpu_out_v[i].x - v[i].x) >= epsilon){
+        if (fabs(gpu_out_v[i].x - v[i].x) >= EPSILON){
             success = false;
             cerr << "Incorrect X output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].x << ", "
                 << gpu_out_v[i].x << endl;
         }
-        if (fabs(gpu_out_v[i].y - v[i].y) >= epsilon){
+        if (fabs(gpu_out_v[i].y - v[i].y) >= EPSILON){
             success = false;
             cerr << "Incorrect Y output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].y << ", "
                 << gpu_out_v[i].y << endl;
         }
-        if (fabs(gpu_out_v[i].z - v[i].z) >= epsilon){
+        if (fabs(gpu_out_v[i].z - v[i].z) >= EPSILON){
             success = false;
             cerr << "Incorrect Z output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].z << ", "
                 << gpu_out_v[i].z << endl;
@@ -438,7 +438,7 @@ void verify_gpu_potential(bool verbose){
 
 	bool success = true;
     for (unsigned int i=0; i<vertices_length; i++){
-        if (fabs(gpu_potential[i] - potential[i]) >= epsilon_pot){
+        if (fabs(gpu_potential[i] - potential[i]) >= EPSILON_POT){
             success = false;
             cerr << "Incorrect potential calculation at " << i << " Vertex: "<< gpu_potential[i]<< ", " << potential[i] << endl;
         }

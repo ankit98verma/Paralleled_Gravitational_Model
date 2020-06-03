@@ -20,7 +20,6 @@
 #include <curand.h>
 using namespace std;
 
-#define EPSILON     1E-6
 
 int ind2_faces;
 triangle * pointers[2];

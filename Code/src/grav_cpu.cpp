@@ -50,10 +50,8 @@ void get_coefficients();
  *
 *******************************************************************************/
 void init_vars(unsigned int depth, float r){
-	epsilon = 1e-6;
 	max_depth = depth;
 	radius = r;
-	epsilon_pot = 1e-7;
 	// Get coefficients for the Potential function calculations
 	get_coefficients();
 }
@@ -358,12 +356,12 @@ void fill_vertices(){
 	for(unsigned int i=1; i<3*faces_length; i++){
 		float sum_i = all_vs[i].x+all_vs[i].y+all_vs[i].z;
 		float sum_i_1 = all_vs[i-1].x+all_vs[i-1].y+all_vs[i-1].z;
-		if((sum_i - sum_i_1) <= epsilon){
+		if((sum_i - sum_i_1) <= EPSILON){
 			is_add = 1;
 			for(unsigned int j=c_start; j<c_end; j++){
 				float t = 	fabs(vertices[j].x - all_vs[i].x) + fabs(vertices[j].y - all_vs[i].y) +
 						fabs(vertices[j].z - vertices[j].z);
-				if(t <= epsilon){
+				if(t <= EPSILON){
 					is_add = 0;
 					break;
 				}
