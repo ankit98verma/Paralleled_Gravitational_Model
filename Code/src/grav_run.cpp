@@ -23,7 +23,7 @@
 #include "ta_utilities.hpp"
 #include "grav_cpu.hpp"
 #include "grav_cuda.cuh"
-#include "helper_cuda.h"
+#include "cuda_calls_helper.h"
 #include "grav_run.hpp"
 
 using namespace std;
@@ -55,7 +55,6 @@ cudaEvent_t stop;
  *
  * Return Values:   0
 *******************************************************************************/
-
 int check_args(int argc, char **argv){
 	if (argc != 5){
         // printf("Usage: ./grav [depth] [thread_per_block] \n");

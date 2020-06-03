@@ -14,7 +14,7 @@
 #include "cuda_calls_helper.h"
 
 #undef  GLOBAL
-#ifdef _GRAV_CUDA_C_
+#ifdef _GRAV_CUDA_ICOSPHERE_CU_
 #define GLOBAL
 #else
 #define GLOBAL  extern

@@ -1,8 +1,8 @@
 /*
  * CUDA blur
  */
-#ifndef _GRAV_CUDA_POTENTIAL_C_
-    #define _GRAV_CUDA_POTENTIAL_C_
+#ifndef _GRAV_CUDA_POTENTIAL_CU_
+    #define _GRAV_CUDA_POTENTIAL_CU_
 #endif
 
 
