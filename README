@@ -124,20 +124,23 @@ UNLIKE (B), (C) has shared memory for V,W which is shared across all threads in 
 
 A COMPARISON ON THE COMPUTATIONAL RUN TIME on potential
 
-vertice 	Naïve			optimal1		optimal 2		optimal 3	
-count		Blocks	Time		Blocks	Time		Blocks	Time		Blocks	Time
+Depth	vertices	Naive			optimal1		optimal 2		optimal 3	
+			Blocks	Time		Blocks	Time		Blocks	Time		Blocks	Time
+1	42		1	7.433728	42	6.94864		42	0.242464	3	0.845152
+2	162		1	7.442624	162	7.44784		162	0.520384	11	0.843264
+3	642		3	7.10624		642	9.380288	642	1.891776	41	0.843808
+4	2562		11	7.147488	2562	15.77888	2562	6.145216	161	2.39392
+5	10242		41	7.199264	10242	44.018559	10242	24.265633	641	7.067584
+6	40962		161	9.339776	40962	145.509048	40962	98.028641	2561	27.718657
+7	163842		641	17.604769	65535	515.582275	65535	368.951477	10241	111.339874
+8	655362		2561	48.579041	65535	2067.05957	65535	1323.918213	40961	382.091064
+9	2621442		10241	171.657318	65535	8163.0625	65535	5332.202637	65535	1511.087891
+10	10485762	40961	654.541504	65535	32047.78125	65535	21240.99219	65535	6038.051758
 
-42		1	7.433728	42	6.94864		42	0.250816	3	0.845152
-162		1	7.442624	162	6.878912	162	0.433888	11	0.843264
-642		3	7.10624		642	8.699712	642	1.957888	41	0.834432
-2562		11	7.147488	2562	13.666816	2562	5.109856	161	2.39392
-10242		41	7.199264	10242	35.507679	10242	15.647424	641	7.067584
-40962		161	9.329792	40962	117.135902	40962	51.400257	2561	28.049055
-163842		641	17.600416	65535	NA		65535	NA		10241	104.715454
-655362		2561	63.609		65535	NA		65535	NA		40961	412.380188
-2621442		10241	205.367		65535	NA		65535	NA		65535	NA
-10485762	40961	798.1147	65535	NA		65535	NA		65535	NA
-41943042	65535	3144.47		65535	NA		65535	NA		65535	NA
+As observed from the table, better use of the shared memory enabled faster computation as one progresses from
+optimal 1 to optimal 3 kernels. Thus, optimal2 is best for depth =1,2; optimal3 is best for depth = 3,4,5 while Naive
+proves to be the best for depth >=6 because of the large number of vertices. It thus makes sense to parallely compute
+potential for vertices than parallise the components of the potential for each vertex due to limited shared memory space.
 
 --------------------------------------------------------------------------------
 FILE/CODE STRUCTURE
