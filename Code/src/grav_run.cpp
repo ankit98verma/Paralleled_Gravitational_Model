@@ -82,18 +82,15 @@ void time_profile_cpu(bool verbose, float * res){
 	float cpu_time_fill_vertices_ms = 0;
 	float cpu_time_grav_pot_ms = 0;
 
-	cout << "cout in cpu" << endl;
 	START_TIMER();
 		create_icoshpere();
 	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
 
-	cout << "Fill vertex in cpu" << endl;
 	START_TIMER();
 		
 		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
 
-	cout << "Grav potential in cpu" << endl;
 	START_TIMER();
     	get_grav_pot();
     STOP_RECORD_TIMER(cpu_time_grav_pot_ms);
@@ -166,7 +163,7 @@ void time_profile_gpu(bool verbose, float * res){
 
     float tmp = 0;
     START_TIMER();
-    	cudacall_sort(1024);
+    	cudacall_fill_vertices(1024);
     STOP_RECORD_TIMER(tmp);
 	err = cudaGetLastError();
     if (cudaSuccess != err){
@@ -206,7 +203,7 @@ void time_profile_gpu(bool verbose, float * res){
 		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
 	    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
 	    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
-	    printf("GPU sorting calculation: %f ms\n", tmp);
+	    printf("GPU Fill vertices: %f ms\n", tmp);
 		printf("GPU potential calculation: %f ms\n", gpu_time_gravitational);
 		printf("GPU NAIVE potential calculation: %f ms\n", naive_gpu_time_gravitational);
 		printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
@@ -425,6 +422,8 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
  * Return Values:   int 1 if code executes successfully else 0.
 *******************************************************************************/
 int main(int argc, char **argv) {
+
+	cout << sizeof(intL) << endl;
 
 	// TA_Utilities::select_coldest_GPU();
 	if(check_args(argc, argv))

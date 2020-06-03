@@ -191,7 +191,7 @@ __device__ void sub_triangle_center(triangle face_tmp, vertex * v_tmp, triangle 
     res->v[2] = v_tmp[2];
 }
 
-__device__ func_ptr_sub_triangle_t funcs2[4] = {sub_triangle_top, sub_triangle_left, sub_triangle_right, sub_triangle_center};
+__device__ func_ptr_sub_triangle_t funcs_list[4] = {sub_triangle_top, sub_triangle_left, sub_triangle_right, sub_triangle_center};
 
 
 __global__ void refine_icosphere_kernal(triangle * faces, float * sums, const float radius, const unsigned int th_len, triangle * faces_out) {
@@ -207,7 +207,7 @@ __global__ void refine_icosphere_kernal(triangle * faces, float * sums, const fl
         v = faces[tri_ind];
         break_triangle(v, v_tmp, radius);
 
-        funcs2[sub_tri_ind](v, v_tmp, &faces_out[idx]);
+        funcs_list[sub_tri_ind](v, v_tmp, &faces_out[idx]);
 
         idx += numthrds;
     }
@@ -219,7 +219,7 @@ void cudacall_icosphere(int thread_num) {
     int ths, n_blocks, ind1;
     for(int i=0; i<max_depth; i++){
         ths = 20*pow(4, i);
-        n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
+        n_blocks = std::min(65535, (ths + 4*thread_num  - 1) / thread_num);
         ind1 = i%2;
         ind2_faces = (i+1)%2;
         refine_icosphere_kernal<<<n_blocks, thread_num>>>(pointers[ind1], dev_face_sums, radius, ths, pointers[ind2_faces]);
@@ -411,7 +411,6 @@ void kernal_mark_duplicates(vertex * v, float * sums, int * ind, int * ind_res, 
     while(idx < length){
         // find the end location
         end = idx + 1;
-
         while(abs(sums[end] - sums[idx]) < EPSILON && end < length){
             end++;
         }
@@ -484,23 +483,6 @@ void kernal_prefix_sum(int * inds, int * inds_res, int length, const unsigned in
     }
 }
 
-
-__global__
-void kernal_prefix_sum_n(int * inds, int length){
-    // unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    // const unsigned int numthrds = blockDim.x * gridDim.x;
-    
-    int i=1;
-    while(i < length){
-        // find the end location
-        inds[i] += inds[i-1];
-        i++;
-        
-        
-        // idx += numthrds;
-    }
-}
-
 __global__ 
 void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shifts, int length, float radius){
     
@@ -509,7 +491,6 @@ void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shift
     
     int index;vertex tmp; float scale;
     while(idx < length){
-
         if(inds[idx] != -1){
             index = idx - shifts[idx];
             tmp = v_in[idx];
@@ -524,8 +505,7 @@ void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shift
 }
 
 
-
-void cudacall_sort(int thread_num) {
+void cudacall_fill_vertices(int thread_num) {
     
     unsigned int len = 3*faces_length;
     int n_blocks = min(65535, (len + thread_num  - 1) / thread_num);
@@ -572,7 +552,6 @@ void cudacall_sort(int thread_num) {
     pointers_inds[ind2_inds] = dev_face_vert_ind_holder;
     ind2_inds = out;
 
-    // kernal_prefix_sum_n<<<1, 1 >>>(pointers_inds[ind2_inds], len);
     // commutate the shifts required.
     l = ceil(log2(len));
     // l = 1;

@@ -17,8 +17,7 @@ z = vertices.z;
 %% plotting vertices
 figure(3);
 hold on;
-plot3(x, y, z, 'r*');
-
+plot3(x, y, z, 'r.');
 %% plotting edeges
 hold on;
 for i = 1:height(edges)
