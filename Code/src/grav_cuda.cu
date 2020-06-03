@@ -5,20 +5,9 @@
     #define _GRAV_CUDA_C_
 #endif
 
-#include "grav_cuda.cuh"
-#include "device_launch_parameters.h"
-
-#include "grav_cpu.hpp"
-#include "cuda_calls_helper.h"
-
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
 #include <math.h>
-#include <curand.h>
-using namespace std;
 
+#include "grav_cuda.cuh"
 
 int ind2_faces;
 triangle * pointers[2];
@@ -54,7 +43,7 @@ void cuda_cpy_input_data(){
     CUDA_CALL(cudaMalloc((void **)&dev_face_sums, 3*faces_length * sizeof(float)));
     CUDA_CALL(cudaMalloc((void**) &dev_face_sums_res, 3*faces_length* sizeof(float)));
 
-    CUDA_CALL(cudaMalloc((void**) &dev_vertices_ICO, vertices_length * sizeof(vertex)));
+    CUDA_CALL(cudaMalloc((void**) &dev_vertices_ico, vertices_length * sizeof(vertex)));
 
     CUDA_CALL(cudaMemcpy(dev_faces_in, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
 
@@ -75,7 +64,7 @@ void cuda_cpy_input_data(){
 
 void cuda_cpy_output_data(){
     CUDA_CALL(cudaMemcpy(gpu_out_faces, pointers[ind2_faces], faces_length*sizeof(triangle), cudaMemcpyDeviceToHost));
-    CUDA_CALL(cudaMemcpy(gpu_out_vertices, dev_vertices_ICO, vertices_length*sizeof(vertex), cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(gpu_out_vertices, dev_vertices_ico, vertices_length*sizeof(vertex), cudaMemcpyDeviceToHost));
 }
 
 void free_gpu_memory(){
@@ -89,7 +78,7 @@ void free_gpu_memory(){
     CUDA_CALL(cudaFree(dev_face_sums));
     CUDA_CALL(cudaFree(dev_face_sums_res));
 
-    CUDA_CALL(cudaFree(dev_vertices_ICO));
+    CUDA_CALL(cudaFree(dev_vertices_ico));
 
     free(gpu_out_faces);
     free(gpu_out_vertices);
@@ -588,7 +577,7 @@ void cuda_remove_duplicates(int thread_num){
     }
     
     // fill the vertices now
-    kernal_fill_vertices<<<n_blocks, thread_num>>>((vertex *) pointers[ind2_faces], dev_vertices_ICO, markers, pointers_inds[ind2_inds], len, radius);
+    kernal_fill_vertices<<<n_blocks, thread_num>>>((vertex *) pointers[ind2_faces], dev_vertices_ico, markers, pointers_inds[ind2_inds], len, radius);
 }
 
 __global__

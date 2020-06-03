@@ -5,18 +5,8 @@
     #define _GRAV_CUDA_POTENTIAL_C_
 #endif
 
+
 #include "grav_cuda.cuh"
-#include "device_launch_parameters.h"
-
-#include "grav_cpu.hpp"
-#include "cuda_calls_helper.h"
-
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <math.h>
-using namespace std;
 
 
 // variables local to this file
@@ -45,7 +35,7 @@ void cuda_cpy_input_data_potential(int vertice_input_type){
         CUDA_CALL(cudaMemcpy(dev_vertices, vertices, sizeof(vertex) * vertices_length, cudaMemcpyHostToDevice));
     }
     else {
-        CUDA_CALL(cudaMemcpy(dev_vertices, dev_vertices_ICO, sizeof(vertex) * vertices_length, cudaMemcpyDeviceToDevice));
+        CUDA_CALL(cudaMemcpy(dev_vertices, dev_vertices_ico, sizeof(vertex) * vertices_length, cudaMemcpyDeviceToDevice));
     }
 
     // OUTput potential - to be compared with CPU values
@@ -880,7 +870,6 @@ void naive_cudacall_gravitational(int thread_num){
     int len = vertices_length;
 
     int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     naive_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 }
 

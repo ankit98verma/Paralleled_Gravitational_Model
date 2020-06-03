@@ -9,7 +9,9 @@
 #define _GRAV_CUDA_CUH_
 
 
+#include "device_launch_parameters.h"
 #include "grav_cpu.hpp"
+#include "cuda_calls_helper.h"
 
 #undef  GLOBAL
 #ifdef _GRAV_CUDA_C_
@@ -24,7 +26,7 @@ GLOBAL vertex * gpu_out_vertices;
 
 GLOBAL vertex * dev_vertices;
 GLOBAL float * gpu_out_potential;
-GLOBAL vertex * dev_vertices_ICO;
+GLOBAL vertex * dev_vertices_ico;
 
 void cuda_cpy_input_data();
 
