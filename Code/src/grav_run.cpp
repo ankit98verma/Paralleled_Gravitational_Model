@@ -77,18 +77,32 @@ int check_args(int argc, char **argv){
  *
  * Return Values:   CPU computational time
 *******************************************************************************/
-void time_profile_cpu(bool verbose, float * res){
+void time_profile_cpu(bool verbose, float * res, int ico_opt_level){
 
 	float cpu_time_icosphere_ms = 0;
 	float cpu_time_fill_vertices_ms = 0;
 	float cpu_time_grav_pot_ms = 0;
 
+	switch(ico_opt_level){
+		case ICO_NAVIE:
+			START_TIMER();
+				create_icoshpere();
+			STOP_RECORD_TIMER(cpu_time_icosphere_ms);
+			break;
+		case ICO_OPT1:
+			START_TIMER();
+				create_icoshpere();
+			STOP_RECORD_TIMER(cpu_time_icosphere_ms);
+			break;
+		
+		default:
+			cout << "Wrong input for Icosphere generation optimization" << endl;
+			res[0] = -1;
+			res[1] = -1;
+			return;
+	}
+	
 	START_TIMER();
-		create_icoshpere();
-	STOP_RECORD_TIMER(cpu_time_icosphere_ms);
-
-	START_TIMER();
-
 		fill_vertices();
 	STOP_RECORD_TIMER(cpu_time_fill_vertices_ms);
 
@@ -129,16 +143,6 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 		cuda_cpy_input_data();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
-	int tmp = 0;
-#ifdef CPU_GPU_ONLY
-	tmp = 1;
-#else
-	tmp = 0;
-#endif
-
-	START_TIMER();
-		cuda_cpy_input_data_potential(tmp);
-	STOP_RECORD_TIMER(gpu_time_indata_cpy_pot);
 
 	switch(ico_opt_level){
 		case ICO_NAVIE:
@@ -170,6 +174,7 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
+
 #ifdef CPU_GPU_ONLY
 	if(verbose)
 	 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
@@ -187,6 +192,16 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
         	cerr << "No kernel error detected" << endl;
     }
 
+	int tmp = 0;
+#ifdef CPU_GPU_ONLY
+	tmp = 1;
+#else
+	tmp = 0;
+#endif
+
+	START_TIMER();
+		cuda_cpy_input_data_potential(tmp);
+	STOP_RECORD_TIMER(gpu_time_indata_cpy_pot);
 	switch(geo_opt_level){
 		case GEO_POTENTIAL_NAVIE:
 			START_TIMER();
@@ -276,7 +291,7 @@ void run(int depth, float radius, int ico_opt_level, int geo_opt_level, bool ver
 #if defined(CPU_ONLY) || defined(CPU_GPU_ONLY)
 	if(verbose)
 		cout << "\n----------Running CPU Code----------\n" << endl;
-	time_profile_cpu(verbose, cpu_res);
+	time_profile_cpu(verbose, cpu_res, ico_opt_level);
 #endif
 
 #if defined(GPU_ONLY) || defined(CPU_GPU_ONLY)
