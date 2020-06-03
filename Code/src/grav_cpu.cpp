@@ -196,6 +196,83 @@ void get_midpoints(triangle tmp, triangle * tri){
 	}
 }
 
+void create_icoshpere_navie(){
+	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
+	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
+	triangle triag_tmp;
+	//Todo: generate icosphere of depth
+	for(unsigned int j=1; j<=max_depth; j++){
+		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
+		unsigned int a = curr_faces_count;
+		// go through every face and divide the face into four equal parts
+		for(unsigned int i=0; i<a; i++){
+			triangle tri_i = faces[i];
+			/* compute 3 new vertices by splitting half on each edge
+	        *         P0
+	        *        / \
+	        *  V[0] *---* V[2]
+	        *      / \ / \
+	        *    P1---*---P2
+	        *         V[1]
+	        */
+			get_midpoints(tri_i, &triag_tmp);
+
+			//adding triangle P0, V[0], V[2]
+			faces[i].v[1].x = triag_tmp.v[0].x;
+			faces[i].v[1].y = triag_tmp.v[0].y;
+			faces[i].v[1].z = triag_tmp.v[0].z;
+
+			faces[i].v[2].x = triag_tmp.v[2].x;
+			faces[i].v[2].y = triag_tmp.v[2].y;
+			faces[i].v[2].z = triag_tmp.v[2].z;
+
+			//adding triangle V[0], P1, V[1]
+			faces[curr_faces_count].v[0].x = triag_tmp.v[0].x;
+			faces[curr_faces_count].v[0].y = triag_tmp.v[0].y;
+			faces[curr_faces_count].v[0].z = triag_tmp.v[0].z;
+
+			faces[curr_faces_count].v[1].x = tri_i.v[1].x;
+			faces[curr_faces_count].v[1].y = tri_i.v[1].y;
+			faces[curr_faces_count].v[1].z = tri_i.v[1].z;
+
+			faces[curr_faces_count].v[2].x = triag_tmp.v[1].x;
+			faces[curr_faces_count].v[2].y = triag_tmp.v[1].y;
+			faces[curr_faces_count].v[2].z = triag_tmp.v[1].z;
+			curr_faces_count++;
+
+			//adding triangle P2, V[1], V[2]
+			faces[curr_faces_count].v[0].x = triag_tmp.v[1].x;
+			faces[curr_faces_count].v[0].y = triag_tmp.v[1].y;
+			faces[curr_faces_count].v[0].z = triag_tmp.v[1].z;
+
+			faces[curr_faces_count].v[1].x = tri_i.v[2].x;
+			faces[curr_faces_count].v[1].y = tri_i.v[2].y;
+			faces[curr_faces_count].v[1].z = tri_i.v[2].z;
+
+			faces[curr_faces_count].v[2].x = triag_tmp.v[2].x;
+			faces[curr_faces_count].v[2].y = triag_tmp.v[2].y;
+			faces[curr_faces_count].v[2].z = triag_tmp.v[2].z;
+			curr_faces_count++;
+
+			//adding triangle V[0], V[1], V[2]
+			faces[curr_faces_count].v[0].x = triag_tmp.v[0].x;
+			faces[curr_faces_count].v[0].y = triag_tmp.v[0].y;
+			faces[curr_faces_count].v[0].z = triag_tmp.v[0].z;
+
+			faces[curr_faces_count].v[1].x = triag_tmp.v[1].x;
+			faces[curr_faces_count].v[1].y = triag_tmp.v[1].y;
+			faces[curr_faces_count].v[1].z = triag_tmp.v[1].z;
+
+			faces[curr_faces_count].v[2].x = triag_tmp.v[2].x;
+			faces[curr_faces_count].v[2].y = triag_tmp.v[2].y;
+			faces[curr_faces_count].v[2].z = triag_tmp.v[2].z;
+			curr_faces_count++;
+		}
+	}
+	memcpy(faces_copy, faces, faces_length*sizeof(triangle));
+	// cout << "Final curr face count: "<< curr_faces_count<< endl;
+}
+
 void create_icoshpere(){
 	/* Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 	memcpy(faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle));
