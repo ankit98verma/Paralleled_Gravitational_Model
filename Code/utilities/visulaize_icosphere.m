@@ -7,8 +7,8 @@ set(0, 'DefaultLineLineWidth', 2);
 
 epsilon = 1e-6;
 %% 
-vertices = readtable('../results/gpu_vertices.csv');  
-% vertices = readtable('../results/cpu_vertices.csv');  
+% vertices = readtable('../results/gpu_vertices.csv');  
+vertices = readtable('../results/cpu_vertices.csv');  
 
 edges = readtable('../results/cpu_edges.csv');
 x = vertices.x;
@@ -17,7 +17,7 @@ z = vertices.z;
 %% plotting vertices
 figure(3);
 hold on;
-plot3(x, y, z, 'r.');
+plot3(x, y, z, 'r*');
 %% plotting edeges
 hold on;
 for i = 1:height(edges)
