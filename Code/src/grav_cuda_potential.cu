@@ -25,7 +25,17 @@ float* dev_coeff;
 float* dev_potential;
 
 
-void cuda_cpy_input_data1(){
+/*******************************************************************************
+ * Function:        cuda_cpy_input_data_potential
+ *
+ * Description:     Dynamic memory allocation in CUDA and also copy information
+ *                  host to device
+ *
+ * Arguments:       null
+ *
+ * Return Values:   null
+*******************************************************************************/
+void cuda_cpy_input_data_potential(){
     // GPU Coefficient file
     CUDA_CALL(cudaMalloc((void**) &dev_coeff, sizeof(float) * 2*N_coeff));
     CUDA_CALL(cudaMemcpy(dev_coeff, coeff, sizeof(float) * 2*N_coeff, cudaMemcpyHostToDevice));
@@ -41,20 +51,61 @@ void cuda_cpy_input_data1(){
 
 }
 
-void cuda_cpy_output_data1(){
+
+/*******************************************************************************
+ * Function:        cuda_cpy_output_data_potential
+ *
+ * Description:     Copy information from device to host
+ *
+ * Arguments:       null
+ *
+ * Return Values:   null
+*******************************************************************************/
+void cuda_cpy_output_data_potential(){
     CUDA_CALL(cudaMemcpy(gpu_out_potential, dev_potential, vertices_length*sizeof(float), cudaMemcpyDeviceToHost));
 }
 
-void free_gpu_memory1(){
+/*******************************************************************************
+ * Function:        free_gpu_memory_potential
+ *
+ * Description:     Copy information from device to host
+ *
+ * Arguments:       null
+ *
+ * Return Values:   null
+*******************************************************************************/
+void free_gpu_memory_potential(){
     CUDA_CALL(cudaFree(dev_coeff));
     CUDA_CALL(cudaFree(dev_potential));
     CUDA_CALL(cudaFree(dev_vertices));
     free(gpu_out_potential);
 }
 
-
+/*******************************************************************************
+ * Function:        naive_gpu_spherical_harmonics
+ *
+ * Description:     Naive implementation of the CPU potential calculation
+ *
+ * Arguments:       float radius: radius of the sphere
+ *                  const int n_sph: degree of potential
+ *                  vertex dev_R_vec: vertex on the sphere
+ *                  float* dev_coeff: coefficient matrix
+ *                  float* U: potential
+ *                  int thread_index: stores the vertex index actually
+ *
+ * Return Values:   null
+*******************************************************************************/
 __device__ void naive_gpu_spherical_harmonics(float radius, const int n_sph, vertex dev_R_vec, float* dev_coeff, float* U, int thread_index){
 
+    /*
+    Naive implementation of he CPU code in GPU.
+    Computes the potential for every vertex in each thread.
+    Effective when large number of vertices on the sphere- can then use GPU effectively
+    Each thread handles each vertex independently
+    Number of thread/block = 256
+    */
+
+    // 462 float array gets stores in the global memory and hence is slower than shared memory access.
     float dev_V[21*21];
     float dev_W[21*21];
 
@@ -126,10 +177,26 @@ __device__ void naive_gpu_spherical_harmonics(float radius, const int n_sph, ver
             // Calculation of the Gravitational Potential Calculation model
         }
     }
+
+    // Stores the potential for each vertex
     U[thread_index] = U[thread_index]*mhu/R_eq;
 }
 
 
+/*******************************************************************************
+ * Function:        naive_kernel_gravitational
+ *
+ * Description:     Kernel: Naive implementation of the CPU potential calculation
+ *
+ * Arguments:       int g_vertices_length: Total number of vertices on the sphere
+ *                  float g_radius: radius of the sphere
+ *                  const int n_sph: degree of potential
+ *                  vertex* dev_vertices: vertices on the sphere
+ *                  float* dev_coeff: coefficient matrix
+ *                  float* dev_potential: potential
+ *
+ * Return Values:   null
+*******************************************************************************/
 __global__
 void naive_kernel_gravitational(int g_vertices_length, float g_radius, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* dev_potential){
 
@@ -141,14 +208,18 @@ void naive_kernel_gravitational(int g_vertices_length, float g_radius, const int
         naive_gpu_spherical_harmonics(g_radius, n_sph, dev_vertices[thread_index], dev_coeff, dev_potential, thread_index);
         thread_index += blockDim.x * gridDim.x;
     }
-
 }
 
-
+/*******************************************************************************
+ * Function:        naive_cudacall_gravitational
+ *
+ * Description:     CPU call for Naive kernel implementation
+ *
+ * Arguments:       int thread_index: stores the vertex index actually
+ *
+ * Return Values:   null
+*******************************************************************************/
 void naive_cudacall_gravitational(int thread_num){
-
-//    int n_blocks = ceil(vertices_length*1.0/thread_num);
-//    n_blocks = std::min(65535, n_blocks);
 
     int len = vertices_length;
     int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
@@ -157,9 +228,25 @@ void naive_cudacall_gravitational(int thread_num){
 }
 
 
-
+/*******************************************************************************
+ * Function:        optimal_kernel_gravitational
+ *
+ * Description:     Optimal implementation: Attempt 1
+ *
+ * Arguments:       int g_vertices_length: Total number of vertices on the sphere
+ *                  float radius: radius of the sphere
+ *                  float eq_R: Radius of the Earth
+ *                  const int n_sph: degree of potential
+ *                  float* dev_coeff: coefficient matrix
+ *                  vertex* dev_vertices: vertices on the sphere
+ *                  float* U: potential
+ *                  float* M: M stores the indice for Vnm
+ *                  float* N: N stores the indice for Vnm
+ *
+ * Return Values:   null
+*******************************************************************************/
 __global__
-void optimal_kernel_gravitational(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
+void optimal_kernel_gravitational1(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
 
 
 //    int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
@@ -385,43 +472,6 @@ void optimal_kernel_gravitational2(int g_vertices_length, float radius, float eq
 }
 
 
-
-
-void optimal_cudacall_gravitational(int thread_num){
-
-//    int n_blocks = ceil(vertices_length*1.0/thread_num);
-//    n_blocks = std::min(65535, n_blocks);
-
-    int len = vertices_length;
-//    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-    int n_blocks = std::min(65535, len);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
-
-    int M[N_coeff];
-    int N[N_coeff];
-
-    int k = 0;
-    for (int n=0;n<N_SPHERICAL+1;n++){
-        for (int m=0;m<n+1;m++){
-            N[k] = n;
-            M[k] = m;
-            k++;
-        }
-    }
-
-    int* dev_M;
-    int* dev_N;
-
-    CUDA_CALL(cudaMalloc((void**) &dev_N, sizeof(int) * N_coeff));
-    CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
-    CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
-    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
-    CUDA_CALL(cudaFree(dev_M));
-    CUDA_CALL(cudaFree(dev_N));
-}
-
-
 __global__
 void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U){
 
@@ -445,30 +495,30 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
     float z0 = eq_R*dev_vertices[vertex_index].z/Radius_sq;
 
     // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
-
+    int n_coeffi = (n_sph+1)*(n_sph+2);
     if (tid<16)
-        dev_VW[tid*(n_sph+1)*(n_sph+2) + 0*(n_sph+2)+0] = eq_R/radius;
+        dev_VW[tid*n_coeffi + 0*(n_sph+2)+0] = eq_R/radius;
     else
-        dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-0)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+        dev_VW[(tid-16)*n_coeffi + (n_sph-0)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
 
     __syncthreads();
 
     if (tid<16)
-        dev_VW[tid*(n_sph+1)*(n_sph+2) + 1*(n_sph+2)+0] = z0 *eq_R/radius;
+        dev_VW[tid*n_coeffi + 1*(n_sph+2)+0] = z0 *eq_R/radius;
     else
-        dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-1)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+        dev_VW[(tid-16)*n_coeffi + (n_sph-1)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
 
     __syncthreads();
 
     if (tid<16){
         for (int n=2; n<n_sph+1; n++){
-            dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+0] = ((2*n-1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-1)*(n_sph+2)+0] - (n-1)*rho*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-2)*(n_sph+2)+0])/n;
+            dev_VW[tid*n_coeffi + n*(n_sph+2)+0] = ((2*n-1)*z0*dev_VW[tid*n_coeffi + (n-1)*(n_sph+2)+0] - (n-1)*rho*dev_VW[tid*n_coeffi + (n-2)*(n_sph+2)+0])/n;
 //            __syncthreads();
         } // Eqn 3.30
     }
     else{
         for (int n=2; n<n_sph+1; n++){
-            dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-n)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+            dev_VW[(tid-16)*n_coeffi + (n_sph-n)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
         } // Eqn 3.30
 
     }
@@ -477,11 +527,11 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
     for (int m = 1; m < n_sph + 1; m++){
         // Eqn 3.29
         if(tid<16){
-            dev_VW[tid*(n_sph+1)*(n_sph+2) + m*(n_sph+2)+m] = (2*m-1)*(x0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (m-1)*(n_sph+2)+m-1]- y0*dev_VW[(tid)*(n_sph+1)*(n_sph+2) + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))]);
+            dev_VW[tid*n_coeffi + m*(n_sph+2)+m] = (2*m-1)*(x0*dev_VW[tid*n_coeffi + (m-1)*(n_sph+2)+m-1]- y0*dev_VW[(tid)*n_coeffi + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))]);
 //            __syncthreads();
         }
         else{
-            dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))] = (2*m-1)*(x0*dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))] + y0*dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (m-1)*(n_sph+2)+m-1]);
+            dev_VW[(tid-16)*n_coeffi + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))] = (2*m-1)*(x0*dev_VW[(tid-16)*n_coeffi + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))] + y0*dev_VW[(tid-16)*n_coeffi + (m-1)*(n_sph+2)+m-1]);
 //            __syncthreads();
         }
     }
@@ -490,14 +540,14 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
         for (int m = 1; m < n_sph + 1; m++){
             // n=m+1 (only one term)
             if (m < n_sph){
-                dev_VW[tid*(n_sph+1)*(n_sph+2) + (m+1)*(n_sph+2)+m] = (2*m+1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + m*(n_sph+2)+m];
+                dev_VW[tid*n_coeffi + (m+1)*(n_sph+2)+m] = (2*m+1)*z0*dev_VW[tid*n_coeffi + m*(n_sph+2)+m];
 
 //                __syncthreads();
 
             }
 
             for (int n = m+2; n<n_sph+1; n++){
-                dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+m] = ((2*n-1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-1)*(n_sph+2)+m]-(n+m-1)*rho*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-2)*(n_sph+2)+m])/(n-m);
+                dev_VW[tid*n_coeffi + n*(n_sph+2)+m] = ((2*n-1)*z0*dev_VW[tid*n_coeffi + (n-1)*(n_sph+2)+m]-(n+m-1)*rho*dev_VW[tid*n_coeffi + (n-2)*(n_sph+2)+m])/(n-m);
 //                __syncthreads();
             }
         }
@@ -506,13 +556,13 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
         for (int m = 1; m < n_sph + 1; m++){
             // n=m+1 (only one term)
             if (m < n_sph){
-                dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(m+1))*(n_sph+2)+ (n_sph+1-(m))] = (2*m+1)*z0*dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))];
+                dev_VW[(tid-16)*n_coeffi + (n_sph-(m+1))*(n_sph+2)+ (n_sph+1-(m))] = (2*m+1)*z0*dev_VW[(tid-16)*n_coeffi + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))];
 //                __syncthreads();
 
             }
 
             for (int n = m+2; n<n_sph+1; n++){
-                dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))] = ((2*n-1)*z0*dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(n-1))*(n_sph+2)+ (n_sph+1-(m))]-(n+m-1)*rho*dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(n-2))*(n_sph+2)+ (n_sph+1-(m))])/(n-m);
+                dev_VW[(tid-16)*n_coeffi + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))] = ((2*n-1)*z0*dev_VW[(tid-16)*n_coeffi + (n_sph-(n-1))*(n_sph+2)+ (n_sph+1-(m))]-(n+m-1)*rho*dev_VW[(tid-16)*n_coeffi + (n_sph-(n-2))*(n_sph+2)+ (n_sph+1-(m))])/(n-m);
 //                __syncthreads();
             }
         }
@@ -547,11 +597,11 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
                 S = N*dev_coeff[(n_sph-n)*(n_sph+2)+ (n_sph-m+1)];
             }
             if(tid<16){
-                shmem[tid] = shmem[tid] + C*dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+m];
+                shmem[tid] = shmem[tid] + C*dev_VW[tid*n_coeffi + n*(n_sph+2)+m];
                 __syncthreads();
             }
             else{
-                shmem[tid] = shmem[tid] + S*dev_VW[(tid-16)*(n_sph+1)*(n_sph+2) + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))];
+                shmem[tid] = shmem[tid] + S*dev_VW[(tid-16)*n_coeffi + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))];
             // Calculation of the Gravitational Potential Calculation model
             __syncthreads();
             }
@@ -592,30 +642,31 @@ void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq
     float z0 = eq_R*dev_vertices[vertex_index].z/Radius_sq;
 
     // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
+    int n_coeffi = (n_sph+1)*(n_sph+2);
 
     if (tid<blk_hlf_dim)
-        dev_VW[tid*(n_sph+1)*(n_sph+2) + 0*(n_sph+2)+0] = eq_R/radius;
+        dev_VW[tid*n_coeffi + 0*(n_sph+2)+0] = eq_R/radius;
     else
-        dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-0)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+        dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-0)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
 
     __syncthreads();
 
     if (tid<blk_hlf_dim)
-        dev_VW[tid*(n_sph+1)*(n_sph+2) + 1*(n_sph+2)+0] = z0 *eq_R/radius;
+        dev_VW[tid*n_coeffi + 1*(n_sph+2)+0] = z0 *eq_R/radius;
     else
-        dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-1)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+        dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-1)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
 
     __syncthreads();
 
     if (tid<blk_hlf_dim){
         for (int n=2; n<n_sph+1; n++){
-            dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+0] = ((2*n-1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-1)*(n_sph+2)+0] - (n-1)*rho*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-2)*(n_sph+2)+0])/n;
+            dev_VW[tid*n_coeffi + n*(n_sph+2)+0] = ((2*n-1)*z0*dev_VW[tid*n_coeffi + (n-1)*(n_sph+2)+0] - (n-1)*rho*dev_VW[tid*n_coeffi + (n-2)*(n_sph+2)+0])/n;
 //            __syncthreads();
         } // Eqn 3.30
     }
     else{
         for (int n=2; n<n_sph+1; n++){
-            dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-n)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+            dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-n)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
         } // Eqn 3.30
 
     }
@@ -624,11 +675,11 @@ void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq
     for (int m = 1; m < n_sph + 1; m++){
         // Eqn 3.29
         if(tid<blk_hlf_dim){
-            dev_VW[tid*(n_sph+1)*(n_sph+2) + m*(n_sph+2)+m] = (2*m-1)*(x0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (m-1)*(n_sph+2)+m-1]- y0*dev_VW[(tid)*(n_sph+1)*(n_sph+2) + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))]);
-//            __syncthreads();
+            dev_VW[tid*n_coeffi + m*(n_sph+2)+m] = (2*m-1)*(x0*dev_VW[tid*n_coeffi + (m-1)*(n_sph+2)+m-1]- y0*dev_VW[(tid)*n_coeffi + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))]);
+//            __syncthreads();*n_coeffi
         }
         else{
-            dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))] = (2*m-1)*(x0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))] + y0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (m-1)*(n_sph+2)+m-1]);
+            dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))] = (2*m-1)*(x0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))] + y0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (m-1)*(n_sph+2)+m-1]);
 //            __syncthreads();
         }
     }
@@ -637,14 +688,14 @@ void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq
         for (int m = 1; m < n_sph + 1; m++){
             // n=m+1 (only one term)
             if (m < n_sph){
-                dev_VW[tid*(n_sph+1)*(n_sph+2) + (m+1)*(n_sph+2)+m] = (2*m+1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + m*(n_sph+2)+m];
+                dev_VW[tid*n_coeffi + (m+1)*(n_sph+2)+m] = (2*m+1)*z0*dev_VW[tid*n_coeffi + m*(n_sph+2)+m];
 
 //                __syncthreads();
 
             }
 
             for (int n = m+2; n<n_sph+1; n++){
-                dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+m] = ((2*n-1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-1)*(n_sph+2)+m]-(n+m-1)*rho*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-2)*(n_sph+2)+m])/(n-m);
+                dev_VW[tid*n_coeffi + n*(n_sph+2)+m] = ((2*n-1)*z0*dev_VW[tid*n_coeffi + (n-1)*(n_sph+2)+m]-(n+m-1)*rho*dev_VW[tid*n_coeffi + (n-2)*(n_sph+2)+m])/(n-m);
 //                __syncthreads();
             }
         }
@@ -653,13 +704,13 @@ void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq
         for (int m = 1; m < n_sph + 1; m++){
             // n=m+1 (only one term)
             if (m < n_sph){
-                dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m+1))*(n_sph+2)+ (n_sph+1-(m))] = (2*m+1)*z0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))];
+                dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m+1))*(n_sph+2)+ (n_sph+1-(m))] = (2*m+1)*z0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))];
 //                __syncthreads();
 
             }
 
             for (int n = m+2; n<n_sph+1; n++){
-                dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))] = ((2*n-1)*z0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n-1))*(n_sph+2)+ (n_sph+1-(m))]-(n+m-1)*rho*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n-2))*(n_sph+2)+ (n_sph+1-(m))])/(n-m);
+                dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))] = ((2*n-1)*z0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n-1))*(n_sph+2)+ (n_sph+1-(m))]-(n+m-1)*rho*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n-2))*(n_sph+2)+ (n_sph+1-(m))])/(n-m);
 //                __syncthreads();
             }
         }
@@ -694,11 +745,11 @@ void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq
                 S = N*dev_coeff[(n_sph-n)*(n_sph+2)+ (n_sph-m+1)];
             }
             if(tid<blk_hlf_dim){
-                shmem[tid] = shmem[tid] + C*dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+m];
+                shmem[tid] = shmem[tid] + C*dev_VW[tid*n_coeffi + n*(n_sph+2)+m];
                 __syncthreads();
             }
             else{
-                shmem[tid] = shmem[tid] + S*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))];
+                shmem[tid] = shmem[tid] + S*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))];
             // Calculation of the Gravitational Potential Calculation model
             __syncthreads();
             }
@@ -712,6 +763,78 @@ void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq
     }
 
 }
+
+
+void optimal_cudacall_gravitational1(int thread_num){
+
+//    int n_blocks = ceil(vertices_length*1.0/thread_num);
+//    n_blocks = std::min(65535, n_blocks);
+
+    int len = vertices_length;
+//    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+    int n_blocks = std::min(65535, len);
+    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
+
+    int M[N_coeff];
+    int N[N_coeff];
+
+    int k = 0;
+    for (int n=0;n<N_SPHERICAL+1;n++){
+        for (int m=0;m<n+1;m++){
+            N[k] = n;
+            M[k] = m;
+            k++;
+        }
+    }
+
+    int* dev_M;
+    int* dev_N;
+
+    CUDA_CALL(cudaMalloc((void**) &dev_N, sizeof(int) * N_coeff));
+    CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
+    CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
+    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
+    CUDA_CALL(cudaFree(dev_M));
+    CUDA_CALL(cudaFree(dev_N));
+}
+
+
+
+void optimal_cudacall_gravitational2(int thread_num){
+
+//    int n_blocks = ceil(vertices_length*1.0/thread_num);
+//    n_blocks = std::min(65535, n_blocks);
+
+    int len = vertices_length;
+//    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+    int n_blocks = std::min(65535, len);
+    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
+
+    int M[N_coeff];
+    int N[N_coeff];
+
+    int k = 0;
+    for (int n=0;n<N_SPHERICAL+1;n++){
+        for (int m=0;m<n+1;m++){
+            N[k] = n;
+            M[k] = m;
+            k++;
+        }
+    }
+
+    int* dev_M;
+    int* dev_N;
+
+    CUDA_CALL(cudaMalloc((void**) &dev_N, sizeof(int) * N_coeff));
+    CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
+    CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
+    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
+    CUDA_CALL(cudaFree(dev_M));
+    CUDA_CALL(cudaFree(dev_N));
+}
+
 
 
 void optimal_cudacall_gravitational3(){

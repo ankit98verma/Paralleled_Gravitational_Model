@@ -128,7 +128,7 @@ void time_profile_gpu(bool verbose, float * res){
 
 	START_TIMER();
 		cuda_cpy_input_data();
-		cuda_cpy_input_data1();
+		cuda_cpy_input_data_potential();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
 	START_TIMER();
@@ -143,11 +143,11 @@ void time_profile_gpu(bool verbose, float * res){
     }
 
 	free_gpu_memory();
-	free_gpu_memory1();
+	free_gpu_memory_potential();
 
 	START_TIMER();
 		cuda_cpy_input_data();
-		cuda_cpy_input_data1();
+		cuda_cpy_input_data_potential();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
 	START_TIMER();
@@ -197,7 +197,7 @@ void time_profile_gpu(bool verbose, float * res){
 
 	START_TIMER();
 		cuda_cpy_output_data();
-		cuda_cpy_output_data1();
+		cuda_cpy_output_data_potential();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
 	if(verbose){
