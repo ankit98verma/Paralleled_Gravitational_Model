@@ -35,14 +35,19 @@ float* dev_potential;
  *
  * Return Values:   null
 *******************************************************************************/
-void cuda_cpy_input_data_potential(){
+void cuda_cpy_input_data_potential(int vertice_input_type){
     // GPU Coefficient file
     CUDA_CALL(cudaMalloc((void**) &dev_coeff, sizeof(float) * 2*N_coeff));
     CUDA_CALL(cudaMemcpy(dev_coeff, coeff, sizeof(float) * 2*N_coeff, cudaMemcpyHostToDevice));
 
     // Vertices
     CUDA_CALL(cudaMalloc((void**) &dev_vertices, sizeof(vertex) * vertices_length));
-    CUDA_CALL(cudaMemcpy(dev_vertices, vertices, sizeof(vertex) * vertices_length, cudaMemcpyHostToDevice));
+    if(vertice_input_type){
+        CUDA_CALL(cudaMemcpy(dev_vertices, vertices, sizeof(vertex) * vertices_length, cudaMemcpyHostToDevice));
+    }
+    else {
+        CUDA_CALL(cudaMemcpy(dev_vertices, dev_vertices_ICO, sizeof(vertex) * vertices_length, cudaMemcpyDeviceToDevice));
+    }
 
     // OUTput potential - to be compared with CPU values
     CUDA_CALL(cudaMalloc((void**) &dev_potential, sizeof(float) * vertices_length));
@@ -863,6 +868,7 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
 void naive_cudacall_gravitational(int thread_num){
 
     int len = vertices_length;
+
     int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
     cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     naive_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
@@ -962,7 +968,6 @@ void optimal_cudacall_gravitational3(){
     int len = vertices_length;
     int n_blocks = ceil(len*1.0/16);
     n_blocks = std::min(65535,  n_blocks);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     optimal_kernel_gravitational3<<<n_blocks, 32>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 
 }
@@ -986,7 +991,6 @@ void optimal_cudacall_gravitational4(){
     int len = vertices_length;
     int n_blocks = ceil(len*1.0/32);
     n_blocks = std::min(65535,  n_blocks);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     // cudaFuncSetCacheConfig(optimal_kernel_gravitational4, cudaFuncCachePreferShared);
     // optimal_kernel_gravitational4<<<n_blocks, 64>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 }

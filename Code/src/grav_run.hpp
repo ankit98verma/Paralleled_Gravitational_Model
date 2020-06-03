@@ -25,7 +25,14 @@
 #define GEOPOTENTIAL_NAVIE_THREAD_NUM	512
 #define GEOPOTENTIAL_OPT1_THREAD_NUM	256
 #define GEOPOTENTIAL_OPT2_THREAD_NUM	256
-#define GEOPOTENTIAL_OPT3_THREAD_NUM	
+
+void verify_gpu_icosphere(bool verbose);
+void verify_gpu_potential(bool verbose);
+
+void export_gpu_outputs(bool verbose);
+void export_cpu_outputs(bool verbose);
+void export_csv(triangle * f, string filename1, string filename2, bool verbose);
+
 
 
 #endif // CUDA_HEADER_CUH_

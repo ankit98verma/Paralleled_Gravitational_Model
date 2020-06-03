@@ -39,8 +39,6 @@ int ind2_sums;
 float * dev_face_sums;
 float * dev_face_sums_res;
 
-vertex * dev_vertices_ICO;
-
 __global__ void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length);
 __global__ void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length);
 
