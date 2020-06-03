@@ -33,7 +33,33 @@ GPU OPTIMISATION and specifics
 
 There are two modules in the code:
 
-1. Generation of uniform set of points on a sphere (handles by Ankit)
+1. Generation of uniform set of points on a sphere
+
+The generation of uniformly distributed set of points is done in two steps:
+    a) Generation of icosphere to a certain depth
+    b) Removal of duplicate vertices (if any) from the list of vertices.
+        i.  Sort the list of vertices obtained from the list of faces with respect to the sum of x, y and z component of the vertices. This will club all the vertices with same sum of components together. Note that the vertices with same sum of components need not be equal to each other (i.e. their components are equal to each other). Hence this will require to process the output further which is described in the next step
+        ii. Go through the vertices whose sum of components are equal and mark the duplicate vertices
+        iii.Remove the duplicate vertices.
+
+We have two algorithms for generating the icosphere whose approach to the problem is described as briefly:
+(A) Navie GPU icosphere generation
+    In this approach one thread is assigned to each face. Each thread divide the face into four parts and stores the results. More detail on this can be found in grav_cuda.cu file.
+
+(B) Optimized GPU icosphere generation
+    In this approach, 4 threads are assigned to each face. Each thread finds one part of the equally divided face and stores the resulting face. More detail on this can be found in grav_cuda.cu file.
+
+Once we complete the icosphere generation, we obtain the array of vertices from the array of faces by type-casting the faces array to vertices.
+We have two approach for sorting the vertices array:
+(A) Naive merge sort: This is a naive implementation of merge sort, this access the global memory to sort the complete array
+(B) Optimized merge sort: This approach uses shared memory to sort the chuncks of 1024 vertices and then uses a "parallel" merge algorithm to merge these chunkc os 1024 vertices together.
+
+Once the array has been sorted, the dupicate vertices are marked and removed.
+
+Note that each vertices consists of 3 floating points and it will a huge burden on the memory to directly sort the vertices hence instead of sorting the vertices we sort the "indices" of the vertices based on the sum of components of the vertices. Once the sorting of the "indices" of the vertices is complete then we update the position of vertices in the vertices array accroding to the sorted array of "indices".
+
+Following is the description of algorithm to generate the icosphere:
+
 
 2. Potential Calculation
 

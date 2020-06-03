@@ -170,6 +170,7 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
         	cerr << "No kernel error detected" << endl;
     }
 
+
     START_TIMER();
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
@@ -181,9 +182,29 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 	verify_gpu_icosphere(verbose);
 #endif
 
-    START_TIMER();
-    	cudacall_fill_vertices(1024);
-    STOP_RECORD_TIMER(gpu_time_fill_vertices);
+	switch(ico_opt_level){
+		case ICO_NAVIE:
+			START_TIMER();
+				cudacall_naive_fill_vertices(ICOSPHERE_GPU_THREAD_NUM);
+			STOP_RECORD_TIMER(gpu_time_fill_vertices);
+			break;
+		case ICO_OPT1:
+			START_TIMER();
+				cudacall_fill_vertices(ICOSPHERE_GPU_THREAD_NUM);
+			STOP_RECORD_TIMER(gpu_time_fill_vertices);
+			break;
+		
+		default:
+			cout << "Wrong input for Icosphere generation optimization" << endl;
+			res[0] = -1;
+			res[1] = -1;
+			return;
+	}
+
+    // START_TIMER();
+    // 	cudacall_fill_vertices(ICOSPHERE_GPU_THREAD_NUM);
+    // STOP_RECORD_TIMER(gpu_time_fill_vertices);
+
 	err = cudaGetLastError();
     if (cudaSuccess != err){
         cerr << "Error " << cudaGetErrorString(err) << endl;
@@ -300,6 +321,7 @@ void run(int depth, float radius, int ico_opt_level, int geo_opt_level, bool ver
 	time_profile_gpu(verbose, ico_opt_level, geo_opt_level, gpu_res);
 #endif
 
+#ifdef CPU_GPU_ONLY
 	float cpu_time = cpu_res[0] +  cpu_res[1];
 	float gpu_time = gpu_res[0] +  gpu_res[1];
 	if(verbose){
@@ -315,9 +337,8 @@ void run(int depth, float radius, int ico_opt_level, int geo_opt_level, bool ver
 	float dis = radius*ang;
 	if(verbose)
 		cout << "Distance b/w any two points of icosphere is: " << dis << " (unit is same as radius)\n" << endl;
-
-	// export_csv(faces, "results/cpu_vertices.csv", "results/cpu_edges.csv", verbose);
-	// export_csv(gpu_out_faces, "results/vertices.csv", "results/gpu_edges.csv", verbose);
+#endif
+	
 	free_cpu_memory();
 	free_gpu_memory_potential();;
 
@@ -340,11 +361,7 @@ int main(int argc, char **argv) {
 		return 0;
 
 	int len = atoi(argv[1]);
-//	if (len >= 10){
-//		cout << "It is recommend to give depth < 10. For the depth 9 alone CPU takes around 60 seconds!" << endl;
-//		cout << "Exiting the code" << endl;
-//		return 0;
-//	}
+
 	int ico_opt_level = atoi(argv[3]);
 	int geo_opt_level = atoi(argv[4]);
 	if((bool)atoi(argv[2]))
@@ -356,7 +373,6 @@ int main(int argc, char **argv) {
 
 	float r = 1;
 	run(len, r, ico_opt_level, geo_opt_level, (bool)atoi(argv[2]), cpu_times, gpu_times);
-
 
     return 1;
 }
@@ -464,7 +480,7 @@ void export_gpu_outputs(bool verbose){
     obj_stream2.close();
 
     if(verbose)
-   		cout<<"Exporting: results/gpu_output_potential.mat" << endl;
+   		cout<<"Exporting: gpu_output_potential.mat" << endl;
 
     std::ofstream f;
     f.open("results/gpu_output_potential.mat", std::ios::out);

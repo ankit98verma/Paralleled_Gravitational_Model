@@ -28,19 +28,25 @@ GLOBAL float * gpu_out_potential;
 GLOBAL vertex * dev_vertices_ICO;
 
 void cuda_cpy_input_data();
-void cuda_cpy_input_data_potential(int vertice_input_type);
-void cuda_cpy_output_data();
-void cuda_cpy_output_data_potential();
+
 void cudacall_icosphere_naive(int);
 void cudacall_icosphere(int);
+
+void cudacall_naive_fill_vertices(int);
 void cudacall_fill_vertices(int);
+
+void cuda_cpy_output_data();
+void free_gpu_memory();
+
+
+void cuda_cpy_input_data_potential(int);
+
+void naive_cudacall_gravitational(int);
 void optimal_cudacall_gravitational1(int);
 void optimal_cudacall_gravitational2(int);
 void optimal_cudacall_gravitational3();
 void optimal_cudacall_gravitational4();
-void naive_cudacall_gravitational(int);
 
-
-void free_gpu_memory();
+void cuda_cpy_output_data_potential();
 void free_gpu_memory_potential();
 #endif

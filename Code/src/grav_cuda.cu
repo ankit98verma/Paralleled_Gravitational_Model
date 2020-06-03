@@ -42,6 +42,8 @@ float * dev_face_sums_res;
 __global__ void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length);
 __global__ void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length);
 
+void cuda_remove_duplicates(int thread_num);
+
 void cuda_cpy_input_data(){
     gpu_out_faces = (triangle *)malloc(faces_length*sizeof(triangle));
     CUDA_CALL(cudaMalloc((void **)&dev_faces_in, faces_length * sizeof(triangle)));
@@ -154,12 +156,15 @@ __global__ void refine_icosphere_naive_kernal(triangle * faces, const float radi
 
 void cudacall_icosphere_naive(int thread_num) {
     // each thread works on one face
+    int n_blocks, ths;
     for(int i=0; i<max_depth; i++){
-        int ths = 20*pow(4, i);
-        int n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
+        ths = 20*pow(4, i);
+        n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
         refine_icosphere_naive_kernal<<<n_blocks, thread_num>>>(dev_faces_in, radius, i);
     }
-
+    int len = 3*faces_length;
+    n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+    kernal_fill_sums_inds<<<n_blocks, thread_num>>>((vertex *)pointers[ind2_faces], dev_face_sums, dev_face_vert_ind, len);
 }
 
 
@@ -502,6 +507,22 @@ void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shift
     }
 }
 
+void cudacall_naive_fill_vertices(int thread_num){
+
+    unsigned int len = 3*faces_length;
+    int n_blocks = min(65535, (len + thread_num  - 1) / thread_num);
+
+    unsigned int l = ceil(log2(len)), ind1;
+    for(int i=0; i<l; i++){
+        ind1 = i%2;
+        ind2_sums = (i+1)%2;
+        ind2_inds = ind2_sums;
+        unsigned int r = pow(2, i+1);
+        kernal_merge_navie_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
+
+    }
+    cuda_remove_duplicates(thread_num);
+}
 
 void cudacall_fill_vertices(int thread_num) {
     
@@ -528,11 +549,18 @@ void cudacall_fill_vertices(int thread_num) {
         kernal_merge_chuncks<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
     }
 
+    cuda_remove_duplicates(thread_num);
+}
+
+void cuda_remove_duplicates(int thread_num){
+
+    unsigned int len = 3*faces_length;
+    int n_blocks = min(65535, (len + thread_num  - 1) / thread_num);
+
     // update the vertices position
     n_blocks = std::min(65535, ((int)len + thread_num  - 1) / thread_num);
     int out = (ind2_faces + 1) %2;
     kernal_update_faces<<<n_blocks, thread_num>>>((vertex *)pointers[ind2_faces], (vertex *)pointers[out], pointers_inds[ind2_inds], len);
-    cudaDeviceSynchronize();
     ind2_faces = out;
 
     // mark the duplicate vertices
@@ -551,9 +579,9 @@ void cudacall_fill_vertices(int thread_num) {
     ind2_inds = out;
 
     // commutate the shifts required.
-    l = ceil(log2(len));
+    int l = ceil(log2(len));
     // l = 1;
-    ind1 = ind2_inds-1;
+    int ind1 = ind2_inds-1;
     for(int i=0; i<l; i++){
         ind1 = (1+ind1)%2;
         ind2_inds = (ind2_inds+1)%2;
@@ -563,36 +591,7 @@ void cudacall_fill_vertices(int thread_num) {
     
     // fill the vertices now
     kernal_fill_vertices<<<n_blocks, thread_num>>>((vertex *) pointers[ind2_faces], dev_vertices_ICO, markers, pointers_inds[ind2_inds], len, radius);
-    
-    // int tmp[len];
-    
-    // export the shift:
-    // CUDA_CALL(cudaMemcpy(tmp, pointers_inds[ind2_inds], len*sizeof(int), cudaMemcpyDeviceToHost));
-    // cout << "Exporting: shifts.csv"<<endl;
-    // string filename1 = "results/shifts.csv";
-    // ofstream obj_stream;
-    // obj_stream.open(filename1);
-    // // obj_stream << "results/inds.csv" << endl;
-    // cout <<"-----------------------" << endl;
-    // for(unsigned int i=0; i< 3*faces_length; i++){
-    //     obj_stream << tmp[i] << endl;
-    // }
-    // obj_stream.close();
-
-    // // export the markers:
-    // CUDA_CALL(cudaMemcpy(tmp, markers, len*sizeof(int), cudaMemcpyDeviceToHost));
-    // cout << "Exporting: markers.csv"<<endl;
-    // ofstream obj;
-    // obj.open("results/inds.csv");
-    // // obj_stream << "results/sums" << endl;
-    // cout <<"-----------------------" << endl;
-    // for(unsigned int i=0; i< 3*faces_length; i++){
-    //     obj << tmp[i] << endl;
-    // }
-    // obj.close();
-
 }
-
 
 __global__
 void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length){
