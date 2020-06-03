@@ -21,6 +21,9 @@
 
 
 GLOBAL triangle * gpu_out_faces;
+GLOBAL vertex * gpu_out_vertices;
+
+GLOBAL vertex * dev_vertices;
 GLOBAL float * gpu_out_potential;
 
 void cuda_cpy_input_data();
@@ -29,7 +32,7 @@ void cuda_cpy_output_data();
 void cuda_cpy_output_data1();
 void cudacall_icosphere_naive(int);
 void cudacall_icosphere(int);
-void cudacall_sort(int);
+void cudacall_fill_vertices(int);
 void optimal_cudacall_gravitational(int);
 void optimal_cudacall_gravitational2(int);
 void optimal_cudacall_gravitational3();

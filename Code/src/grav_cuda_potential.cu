@@ -23,7 +23,6 @@ using namespace std;
 // variables local to this file
 float* dev_coeff;
 float* dev_potential;
-vertex* dev_vertices;
 
 
 void cuda_cpy_input_data1(){
@@ -738,13 +737,11 @@ void optimal_cudacall_gravitational4(){
     // Number of vertices/block = 32;
     // Compute V, W in shared memory and separately
 
-
     int len = vertices_length;
     int n_blocks = ceil(len*1.0/32);
     n_blocks = std::min(65535,  n_blocks);
     cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     cudaFuncSetCacheConfig(optimal_kernel_gravitational4, cudaFuncCachePreferShared);
     optimal_kernel_gravitational4<<<n_blocks, 64>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
-
 }
 

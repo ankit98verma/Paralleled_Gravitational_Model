@@ -29,6 +29,7 @@ using std::string;
 #define N_SPHERICAL 				20
 #define N_coeff (N_SPHERICAL+1)*(N_SPHERICAL+2)/2
 
+typedef long long int intL;
 struct vertex
 {
     float x;
@@ -45,16 +46,16 @@ typedef struct triangle triangle;
 
 /**** Variables related to Icosphere ****/
 
-int partition_sum(void * arr, int low, int high);
+intL partition_sum(void * arr, intL low, intL high);
 
 // faces of the icosphere
 GLOBAL triangle * faces;
 GLOBAL triangle faces_init[ICOSPHERE_INIT_FACE_LEN];
-GLOBAL unsigned int faces_length;
+GLOBAL intL faces_length;
 
 // vertices of the icosphere
 GLOBAL vertex * vertices;
-GLOBAL unsigned int vertices_length;
+GLOBAL intL vertices_length;
 
 // The depth of the icosphere
 GLOBAL unsigned int max_depth;
@@ -76,10 +77,10 @@ void init_icosphere();
 
 void create_icoshpere();
 void fill_vertices();
-void quickSort_points(int low, int high);
+void quickSort_points(intL low, intL high);
 void fill_common_theta();
 
-void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int));
+void quickSort(void * arr, intL low, intL high, intL partition_fun(void *, intL, intL));
 
 void export_csv(triangle * f, string filename1, string filename2, bool verbose);
 
