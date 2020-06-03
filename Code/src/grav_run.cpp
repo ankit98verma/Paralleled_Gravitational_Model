@@ -128,7 +128,7 @@ void time_profile_gpu(bool verbose, float * res, int ico_opt_level, int geo_opt_
 
 	START_TIMER();
 		cuda_cpy_input_data();
-		cuda_cpy_input_data1();
+		cuda_cpy_input_data_potential();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
 	switch(ico_opt_level){
@@ -192,7 +192,7 @@ void time_profile_gpu(bool verbose, float * res, int ico_opt_level, int geo_opt_
 
 	START_TIMER();
 		cuda_cpy_output_data();
-		cuda_cpy_output_data1();
+		cuda_cpy_output_data_potential();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
 	if(verbose){

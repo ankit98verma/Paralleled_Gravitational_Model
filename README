@@ -31,7 +31,37 @@ Lastly, producing a heat-map denoting contribution of specific (/all) terms to g
 --------------------------------------------------------------------------------
 GPU OPTIMISATION and specifics
 
-<details not provided for CPU demo>
+There are two modules in the code:
+
+1. Generation of uniform set of points on a sphere (handles by Ankit)
+
+2. Potential Calculation
+
+Potential is calculated at each vertex on the sphere. 
+U(r) = Σ(n=0:N) Σ(m=0:n) (C_nm*V_nm + S_nm*W_nm)
+where,
+	r is the position coordinate of the vertex
+	N is the order of geo-potential magnitude (terms which generate the potential model)
+	C_nm, S_nm = gravitational potential coefficients, which are stored in resources/GRAVITY_MODEL.txt  
+	V, W- are terms to be calculated for the geopotential calculation 
+	(NOTE: V_nm,W_nm follow a recursive formula and hence, are interdependent and intra-dependent on previous values of V, W)
+
+Now, for order, N = 20, there are 231 terms of V, W which need to be calculated for the calculation of the geopotential at every vertex.
+There are multiple approaches to find the terms and their summation for large number of vertices spread on the globe. Four different ways on GPU have been implemented for the calculation of the potential in src\grav_cuda_potential.cu
+
+(A) naive_gpu_spherical_harmonics
+
+    Naive implementation of he CPU code in GPU.
+    Computes the potential for every vertex in each thread.
+    Effective when large number of vertices on the sphere- can then use GPU effectively
+
+
+This is a very naive way of calculating the potential. The potential calculation is parallelised for all vertices in individual threads. This is very effective when there are large number of vertices on the sphere and it is beneficial to overload the GPU threads with vertices than with the calculation of 231 terms in different threads.
+Thus, every thread finds the potential of individual vertices.
+
+(B) 
+
+ 
 
 --------------------------------------------------------------------------------
 FILE/CODE STRUCTURE
@@ -69,7 +99,8 @@ CPU_Demo
     │       cuda_header.cuh         -> The cuda header
     │       grav_cpu.cpp            -> The CPU code of the project
     │       grav_cpu.hpp            -> Contains the CPU modules declarations and is the header file for grav_cpu.cpp
-    │       grav_cuda.cu            -> The GPU code of the project
+    │       grav_cuda.cu            -> The GPU code for generation of icosphere (Ankit)
+    │       grav_cuda_potential.cu  -> The GPU code for calculation of potential terms (Garima)
     │       grav_cuda.cuh           -> Contains the GPU modules declarations and is the header file for grav_cuda.cu
     │       grav_run.cpp            -> The code containing the "main( , )" function. It runs both the CPU and GPU modules of the code.(GPU code has been commented for CPU demo).
     │       helper_cuda.h           -> Helper file for GPU program
