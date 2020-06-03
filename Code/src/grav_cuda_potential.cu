@@ -2,7 +2,7 @@
  * CUDA blur
  */
 #ifndef _GRAV_CUDA_POTENTIAL_C_
-	#define _GRAV_CUDA_POTENTIAL_C_
+    #define _GRAV_CUDA_POTENTIAL_C_
 #endif
 
 #include "grav_cuda.cuh"
@@ -935,7 +935,7 @@ void optimal_cudacall_gravitational2(int thread_num){
     CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
     CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
-    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
+    optimal_kernel_gravitational2<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
     CUDA_CALL(cudaFree(dev_M));
     CUDA_CALL(cudaFree(dev_N));
 }
