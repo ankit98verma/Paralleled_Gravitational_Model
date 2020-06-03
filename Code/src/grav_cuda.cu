@@ -9,22 +9,25 @@
 
 #include "grav_cuda.cuh"
 
-int ind2_faces;
+
+/* Local variables */
+
+int ind2_faces;             // denote the index of the pointer which points to the most updated faces array
 triangle * pointers[2];
-triangle * dev_faces_in;
-triangle * dev_faces_out;
+triangle * dev_faces;
+triangle * dev_faces_cpy;
 
 int * pointers_inds[2];
 int ind2_inds;
 int * dev_face_vert_ind;
-int * dev_face_vert_ind_res;
-int * dev_face_vert_ind_holder;
+int * dev_face_vert_ind_cpy;
+int * dev_face_vert_ind_cpy2;
 
 
 float * pointers_sums[2];
 int ind2_sums;
 float * dev_face_sums;
-float * dev_face_sums_res;
+float * dev_face_sums_cpy;
 
 __global__ void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length);
 __global__ void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length);
@@ -33,31 +36,31 @@ void cuda_remove_duplicates(int thread_num);
 
 void cuda_cpy_input_data(){
     gpu_out_faces = (triangle *)malloc(faces_length*sizeof(triangle));
-    CUDA_CALL(cudaMalloc((void **)&dev_faces_in, faces_length * sizeof(triangle)));
-    CUDA_CALL(cudaMalloc((void **)&dev_faces_out, faces_length * sizeof(triangle)));
+    CUDA_CALL(cudaMalloc((void **)&dev_faces, faces_length * sizeof(triangle)));
+    CUDA_CALL(cudaMalloc((void **)&dev_faces_cpy, faces_length * sizeof(triangle)));
 
     CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind, 3*faces_length * sizeof(int)));
-    CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind_res, 3*faces_length * sizeof(int)));
-    CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind_holder, 3*faces_length * sizeof(int)));
+    CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind_cpy, 3*faces_length * sizeof(int)));
+    CUDA_CALL(cudaMalloc((void **)&dev_face_vert_ind_cpy2, 3*faces_length * sizeof(int)));
 
     CUDA_CALL(cudaMalloc((void **)&dev_face_sums, 3*faces_length * sizeof(float)));
-    CUDA_CALL(cudaMalloc((void**) &dev_face_sums_res, 3*faces_length* sizeof(float)));
+    CUDA_CALL(cudaMalloc((void**) &dev_face_sums_cpy, 3*faces_length* sizeof(float)));
 
     CUDA_CALL(cudaMalloc((void**) &dev_vertices_ico, vertices_length * sizeof(vertex)));
 
-    CUDA_CALL(cudaMemcpy(dev_faces_in, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(dev_faces, faces_init, ICOSPHERE_INIT_FACE_LEN*sizeof(triangle), cudaMemcpyHostToDevice));
 
     ind2_faces = 0;
-    pointers[0] = dev_faces_in;
-    pointers[1] = dev_faces_out;
+    pointers[0] = dev_faces;
+    pointers[1] = dev_faces_cpy;
 
     ind2_sums = 0;
     pointers_sums[0] = dev_face_sums;
-    pointers_sums[1] = dev_face_sums_res;
+    pointers_sums[1] = dev_face_sums_cpy;
 
     ind2_inds = 0;
     pointers_inds[0] = dev_face_vert_ind;
-    pointers_inds[1] = dev_face_vert_ind_res;
+    pointers_inds[1] = dev_face_vert_ind_cpy;
 
     gpu_out_vertices = (vertex *) malloc(vertices_length*sizeof(vertex));
 }
@@ -68,15 +71,15 @@ void cuda_cpy_output_data(){
 }
 
 void free_gpu_memory(){
-    CUDA_CALL(cudaFree(dev_faces_in));
-    CUDA_CALL(cudaFree(dev_faces_out));
+    CUDA_CALL(cudaFree(dev_faces));
+    CUDA_CALL(cudaFree(dev_faces_cpy));
 
     CUDA_CALL(cudaFree(dev_face_vert_ind));
-    CUDA_CALL(cudaFree(dev_face_vert_ind_res));
-    CUDA_CALL(cudaFree(dev_face_vert_ind_holder));
+    CUDA_CALL(cudaFree(dev_face_vert_ind_cpy));
+    CUDA_CALL(cudaFree(dev_face_vert_ind_cpy2));
 
     CUDA_CALL(cudaFree(dev_face_sums));
-    CUDA_CALL(cudaFree(dev_face_sums_res));
+    CUDA_CALL(cudaFree(dev_face_sums_cpy));
 
     CUDA_CALL(cudaFree(dev_vertices_ico));
 
@@ -147,7 +150,7 @@ void cudacall_icosphere_naive(int thread_num) {
     for(int i=0; i<max_depth; i++){
         ths = 20*pow(4, i);
         n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
-        refine_icosphere_naive_kernal<<<n_blocks, thread_num>>>(dev_faces_in, radius, i);
+        refine_icosphere_naive_kernal<<<n_blocks, thread_num>>>(dev_faces, radius, i);
     }
     int len = 3*faces_length;
     n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
@@ -562,7 +565,7 @@ void cuda_remove_duplicates(int thread_num){
     out  = (ind2_inds + 1)%2;
     kernal_count_shifts<<<n_blocks, thread_num>>>
                             (pointers_inds[ind2_inds], pointers_inds[out], len);
-    pointers_inds[ind2_inds] = dev_face_vert_ind_holder;
+    pointers_inds[ind2_inds] = dev_face_vert_ind_cpy2;
     ind2_inds = out;
 
     // commutate the shifts required.
