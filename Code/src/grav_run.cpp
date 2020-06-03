@@ -160,6 +160,14 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
     }
 
     START_TIMER();
+		cuda_cpy_output_data();
+	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
+
+	if(verbose)
+	 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
+	verify_gpu_icosphere(verbose);
+
+    START_TIMER();
     	cudacall_fill_vertices(1024);
     STOP_RECORD_TIMER(gpu_time_fill_vertices);
 	err = cudaGetLastError();
@@ -170,7 +178,7 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
         	cerr << "No kernel error detected" << endl;
     }
 
-	switch(ico_opt_level){
+	switch(geo_opt_level){
 		case GEO_POTENTIAL_NAVIE:
 			START_TIMER();
 				naive_cudacall_gravitational(GEOPOTENTIAL_NAVIE_THREAD_NUM);
@@ -216,6 +224,11 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 		cuda_cpy_output_data_potential();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy_pot);
 
+	if(verbose)
+		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
+	verify_gpu_potential(verbose);
+
+
 	if(verbose){
 		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy+ gpu_time_indata_cpy_pot);
 	    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere);
@@ -228,134 +241,6 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 	res[1] = gpu_time_gravitational + gpu_time_outdata_cpy_pot + gpu_time_indata_cpy_pot;
 }
 
-
-
-/*******************************************************************************
- * Function:        verify_gpu_potential
- *
- * Description:     Computes the difference between the CPU potential and GPU
- *                  potential
- *
- * Arguments:       bool verbose: If true then it will prints messages on the c
- *                  console
- *
- * Return Values:   none
-*******************************************************************************/
-void verify_gpu_potential(bool verbose){
-
-	float* gpu_potential = gpu_out_potential;
-
-	bool success = true;
-    for (unsigned int i=0; i<vertices_length; i++){
-        if (fabs(gpu_potential[i] - potential[i]) >= epsilon_pot){
-            success = false;
-            cerr << "Incorrect potential calculation at " << i << " Vertex: "<< gpu_potential[i]<< ", " << potential[i] << endl;
-        }
-    }
-    if(success){
-    	if(verbose)
-        	cout << "--------Successful output--------" << endl;
-    }
-    else{
-    	cout << "******** Unsuccessful output ********" << endl;
-    }
-}
-
-
-
-/*******************************************************************************
- * Function:        verify_gpu_output
- *
- * Description:     Computes the difference between the CPU and GPU vertices
- *
- * Arguments:       bool verbose: If true then it will prints messages on the c
- *                  console
- *
- * Return Values:   none
-*******************************************************************************/
-void verify_gpu_output(bool verbose){
-
-	vertex * v = (vertex *)faces;
-	vertex * gpu_out_v = (vertex *)gpu_out_faces;
-	bool success = true;
-    for (unsigned int i=0; i<3*faces_length; i++){
-        if (fabs(gpu_out_v[i].x - v[i].x) >= epsilon){
-            success = false;
-            cerr << "Incorrect X output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].x << ", "
-                << gpu_out_v[i].x << endl;
-        }
-        if (fabs(gpu_out_v[i].y - v[i].y) >= epsilon){
-            success = false;
-            cerr << "Incorrect Y output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].y << ", "
-                << gpu_out_v[i].y << endl;
-        }
-        if (fabs(gpu_out_v[i].z - v[i].z) >= epsilon){
-            success = false;
-            cerr << "Incorrect Z output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].z << ", "
-                << gpu_out_v[i].z << endl;
-        }
-    }
-    if(success){
-    	if(verbose)
-        	cout << "--------Successful output--------" << endl;
-    }
-    else{
-    	cout << "******** Unsuccessful output ********" << endl;
-    }
-}
-
-/*******************************************************************************
- * Function:        output_potential
- *
- * Description:     Stores the vertices and corresponding potential in a MATLAB
- *                  compatible .mat file
- *
- * Arguments:       bool verbose: If true message will be printed else not.
- *
- * Return Values:   none
-*******************************************************************************/
-
-void output_potential(bool verbose){
-	if(verbose)
-   		cout<<"Exporting: results/output_potential.mat" << endl;
-
-    std::ofstream f;
-    f.open("results/output_potential.mat", std::ios::out);
-
-    for (unsigned int i=0; i<vertices_length; i++){
-        f<<i<<'\t'<<vertices[i].x<<'\t'<<vertices[i].y<<'\t'<<vertices[i].z<<'\t'<<potential[i]<<'\n';
-    }
-    f.close();
-}
-
-
-void export_tmp(){
-
-	cout << "Exporting: gpu_sorted_vertices.csv"<<endl;
-
-	string filename1 = "results/gpu_sorted_vertices.csv";
-	ofstream obj_stream;
-	obj_stream.open(filename1);
-	obj_stream << "x, y, z" << endl;
-	vertex * v = (vertex *) gpu_out_faces;
-	cout <<"-----------------------" << endl;
-	for(unsigned int i=0; i< 3*faces_length; i++){
-		obj_stream << v[i].x << ", " << v[i].y << ", " << v[i].z << endl;
-	}
-	obj_stream.close();
-
-    cout << "Exporting: gpu_vertices.csv"<<endl;
-
-    string filename2 = "results/gpu_vertices.csv";
-    ofstream obj_stream2;
-    obj_stream2.open(filename2);
-    obj_stream2 << "x, y, z" << endl;
-    cout <<"-----------------------" << endl;
-    for(unsigned int i=0; i< vertices_length; i++){
-        obj_stream2 << gpu_out_vertices[i].x <<", "<< gpu_out_vertices[i].y <<", "<< gpu_out_vertices[i].z  << endl;
-    }
-    obj_stream2.close();
-}
 /*******************************************************************************
  * Function:        run
  *
@@ -384,17 +269,6 @@ void run(int depth, float radius, int ico_opt_level, int geo_opt_level, bool ver
 	if(verbose)
 		cout << "\n----------Running GPU Code----------\n" << endl;
 	time_profile_gpu(verbose, ico_opt_level, geo_opt_level, gpu_res);
-
-	 // if(verbose)
-	 // 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
-	 // verify_gpu_output(verbose);
-
-	// export_tmp();
-
-
-	 if(verbose)
-	 	cout << "\n----------Verifying GPU Potential ----------\n" << endl;
-	 verify_gpu_potential(verbose);
 
 	float cpu_time = cpu_res[0] +  cpu_res[1];
 	float gpu_time = gpu_res[0] +  gpu_res[1];
@@ -457,3 +331,157 @@ int main(int argc, char **argv) {
     return 1;
 }
 
+
+/*******************************************************************************
+ * Function:        verify_gpu_icosphere
+ *
+ * Description:     Computes the difference between the CPU and GPU vertices
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   none
+*******************************************************************************/
+void verify_gpu_icosphere(bool verbose){
+
+	vertex * v = (vertex *)faces;
+	vertex * gpu_out_v = (vertex *)gpu_out_faces;
+	bool success = true;
+    for (unsigned int i=0; i<3*faces_length; i++){
+        if (fabs(gpu_out_v[i].x - v[i].x) >= epsilon){
+            success = false;
+            cerr << "Incorrect X output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].x << ", "
+                << gpu_out_v[i].x << endl;
+        }
+        if (fabs(gpu_out_v[i].y - v[i].y) >= epsilon){
+            success = false;
+            cerr << "Incorrect Y output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].y << ", "
+                << gpu_out_v[i].y << endl;
+        }
+        if (fabs(gpu_out_v[i].z - v[i].z) >= epsilon){
+            success = false;
+            cerr << "Incorrect Z output at face " << int(i/3) << " Vertex "<< i%3<< ": " << v[i].z << ", "
+                << gpu_out_v[i].z << endl;
+        }
+    }
+    if(success){
+    	if(verbose)
+        	cout << "--------Successful output--------" << endl;
+    }
+    else{
+    	cout << "******** Unsuccessful output ********" << endl;
+    }
+}
+
+
+
+/*******************************************************************************
+ * Function:        verify_gpu_potential
+ *
+ * Description:     Computes the difference between the CPU potential and GPU
+ *                  potential
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   none
+*******************************************************************************/
+void verify_gpu_potential(bool verbose){
+
+	float* gpu_potential = gpu_out_potential;
+
+	bool success = true;
+    for (unsigned int i=0; i<vertices_length; i++){
+        if (fabs(gpu_potential[i] - potential[i]) >= epsilon_pot){
+            success = false;
+            cerr << "Incorrect potential calculation at " << i << " Vertex: "<< gpu_potential[i]<< ", " << potential[i] << endl;
+        }
+    }
+    if(success){
+    	if(verbose)
+        	cout << "--------Successful output--------" << endl;
+    }
+    else{
+    	cout << "******** Unsuccessful output ********" << endl;
+    }
+}
+
+void export_gpu_outputs(bool verbose){
+
+	cout << "Exporting: gpu_sorted_vertices.csv"<<endl;
+
+	string filename1 = "results/gpu_sorted_vertices.csv";
+	ofstream obj_stream;
+	obj_stream.open(filename1);
+	obj_stream << "x, y, z" << endl;
+	vertex * v = (vertex *) gpu_out_faces;
+	cout <<"-----------------------" << endl;
+	for(unsigned int i=0; i< 3*faces_length; i++){
+		obj_stream << v[i].x << ", " << v[i].y << ", " << v[i].z << endl;
+	}
+	obj_stream.close();
+
+    cout << "Exporting: gpu_vertices.csv"<<endl;
+
+    string filename2 = "results/gpu_vertices.csv";
+    ofstream obj_stream2;
+    obj_stream2.open(filename2);
+    obj_stream2 << "x, y, z" << endl;
+    cout <<"-----------------------" << endl;
+    for(unsigned int i=0; i< vertices_length; i++){
+        obj_stream2 << gpu_out_vertices[i].x <<", "<< gpu_out_vertices[i].y <<", "<< gpu_out_vertices[i].z  << endl;
+    }
+    obj_stream2.close();
+
+    if(verbose)
+   		cout<<"Exporting: results/gpu_output_potential.mat" << endl;
+
+    std::ofstream f;
+    f.open("results/gpu_output_potential.mat", std::ios::out);
+
+    for (unsigned int i=0; i<vertices_length; i++){
+        f<<i<<'\t'<<vertices[i].x<<'\t'<<vertices[i].y<<'\t'<<vertices[i].z<<'\t'<< gpu_out_potential[i]<<'\n';
+    }
+    f.close();
+
+}
+
+void export_cpu_outputs(bool verbose){
+
+	cout << "Exporting: cpu_vertices.csv"<<endl;
+
+	string filename1 = "results/cpu_vertices.csv";
+	ofstream obj_stream;
+	obj_stream.open(filename1);
+	obj_stream << "x, y, z" << endl;
+	for(unsigned int i=0; i< vertices_length; i++){
+		obj_stream << vertices[i].x << ", " << vertices[i].y << ", " << vertices[i].z << endl;
+	}
+	obj_stream.close();
+
+    cout << "Exporting: cpu_edges.csv"<<endl;
+
+    ofstream obj_stream2;
+	obj_stream2.open("results/cpu_edges.csv");
+	obj_stream2 << "x1, y1, z1, x2, y2, z2" << endl;
+	for(unsigned int i=0; i<3*faces_length; i++){
+		triangle triangle_tmp = faces[i];
+		for(int j=0; j<3;j++)
+			obj_stream2 << 	triangle_tmp.v[j].x << ", " << triangle_tmp.v[j].y << ", " << triangle_tmp.v[j].z << ", " <<
+							triangle_tmp.v[(j+1)%3].x << ", " << triangle_tmp.v[(j+1)%3].y << ", " << triangle_tmp.v[(j+1)%3].z << endl;
+	}
+	obj_stream2.close();
+
+    
+    if(verbose)
+   		cout<<"Exporting: results/cpu_output_potential.mat" << endl;
+
+    std::ofstream f;
+    f.open("results/cpu_output_potential.mat", std::ios::out);
+
+    for (unsigned int i=0; i<vertices_length; i++){
+        f<<i<<'\t'<<vertices[i].x<<'\t'<<vertices[i].y<<'\t'<<vertices[i].z<<'\t'<<potential[i]<<'\n';
+    }
+    f.close();
+
+}

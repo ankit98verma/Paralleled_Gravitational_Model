@@ -223,7 +223,6 @@ void naive_cudacall_gravitational(int thread_num){
 
     int len = vertices_length;
     int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     naive_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 }
 
@@ -793,7 +792,6 @@ void optimal_cudacall_gravitational1(int thread_num){
     int len = vertices_length;
 //    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
     int n_blocks = std::min(65535, len);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
 
     int M[N_coeff];
     int N[N_coeff];
@@ -830,7 +828,6 @@ void optimal_cudacall_gravitational2(int thread_num){
     int len = vertices_length;
 //    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
     int n_blocks = std::min(65535, len);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
 
     int M[N_coeff];
     int N[N_coeff];
@@ -868,7 +865,6 @@ void optimal_cudacall_gravitational3(){
     int len = vertices_length;
     int n_blocks = ceil(len*1.0/16);
     n_blocks = std::min(65535,  n_blocks);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     optimal_kernel_gravitational3<<<n_blocks, 32>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 
 }
@@ -884,7 +880,6 @@ void optimal_cudacall_gravitational4(){
     int len = vertices_length;
     int n_blocks = ceil(len*1.0/32);
     n_blocks = std::min(65535,  n_blocks);
-    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
     // cudaFuncSetCacheConfig(optimal_kernel_gravitational4, cudaFuncCachePreferShared);
     // optimal_kernel_gravitational4<<<n_blocks, 64>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 }
