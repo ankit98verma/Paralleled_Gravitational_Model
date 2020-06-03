@@ -86,7 +86,7 @@ void time_profile_cpu(bool verbose, float * res, int ico_opt_level){
 	switch(ico_opt_level){
 		case ICO_NAVIE:
 			START_TIMER();
-				create_icoshpere();
+				create_icoshpere_navie();
 			STOP_RECORD_TIMER(cpu_time_icosphere_ms);
 			break;
 		case ICO_OPT1:

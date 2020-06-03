@@ -75,6 +75,7 @@ void init_vars(unsigned int depth, float r);
 void allocate_cpu_mem(bool verbose);
 void init_icosphere();
 
+void create_icoshpere_navie();
 void create_icoshpere();
 void fill_vertices();
 void quickSort_points(int low, int high);
