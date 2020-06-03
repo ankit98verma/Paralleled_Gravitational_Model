@@ -31,6 +31,9 @@ void cudacall_icosphere_naive(int);
 void cudacall_icosphere(int);
 void cudacall_sort(int);
 void optimal_cudacall_gravitational(int);
+void optimal_cudacall_gravitational2(int);
+void optimal_cudacall_gravitational3();
+void optimal_cudacall_gravitational4();
 void naive_cudacall_gravitational(int);
 
 
