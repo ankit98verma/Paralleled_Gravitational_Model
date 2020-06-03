@@ -7,7 +7,6 @@
 
 #include "grav_cuda.cuh"
 #include "device_launch_parameters.h"
-#include "cuda_header.cuh"
 
 #include "grav_cpu.hpp"
 #include "cuda_calls_helper.h"

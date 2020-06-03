@@ -9,7 +9,6 @@
 #define _GRAV_CUDA_CUH_
 
 
-#include "cuda_header.cuh"
 #include "grav_cpu.hpp"
 
 #undef  GLOBAL
