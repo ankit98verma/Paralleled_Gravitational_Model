@@ -31,8 +31,8 @@ float * dev_face_sums_cpy;		// a copy for the sums of components of each vertex 
 
 
 /* Local functions */
-__global__ void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length);
-__global__ void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length);
+__global__ void kernel_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length);
+__global__ void kernel_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length);
 void cuda_remove_duplicates(int thread_num);
 
 
@@ -101,6 +101,16 @@ void cuda_cpy_output_data(){
 	CUDA_CALL(cudaMemcpy(gpu_out_vertices, dev_vertices_ico, vertices_length*sizeof(vertex), cudaMemcpyDeviceToHost));
 }
 
+/*******************************************************************************
+ * Function:        free_gpu_memory
+ *
+ * Description:     This function frees the GPU memory and the corresponding GPU
+ *					output memory in the CPU.
+ *
+ * Arguments:       None
+ *
+ * Return Values:   None
+*******************************************************************************/
 void free_gpu_memory(){
 	CUDA_CALL(cudaFree(dev_faces));
 	CUDA_CALL(cudaFree(dev_faces_cpy));
@@ -118,21 +128,105 @@ void free_gpu_memory(){
 	free(gpu_out_vertices);
 }
 
-
+/*******************************************************************************
+ * Function:        break_triangle
+ *
+ * Description:     This function returns the midpoint of the edges of the input
+ *					triangle. The output of the triangle is the list of three 
+ *					vertices each being the midpoint of the an edge of the triangle.
+ *					triangle tri_i = faces[i];
+ *
+ *									         P0
+ *									        / \
+ *									  V[0] *---* V[2]
+ *									      / \ / \
+ *									    P1---*---P2
+ *									         V[1]
+ *
+ *					Where:
+ *					INPUT:	face_tmp.v[0] = P0, face_tmp.v[1] = P1, face_tmp.v[2] = P2
+ *					OUTPUT:	v_tmp[0] = V[0], v_tmp[1] = V[1], v_tmp[2] = V[2]
+ *
+ * Arguments:       triangle face_tmp: The triangle whose edges is to be broken into 
+ *										two equal parts
+ *					vertex * tmp: The array to which the results will be written.
+ *					float radius: The radius of the sphere to which the icosphere
+ *									is to be project
+ *
+ *
+ * Return Values:   None
+*******************************************************************************/
 __device__ void break_triangle(triangle face_tmp, vertex * v_tmp, float radius) {
 	float x_tmp, y_tmp, z_tmp, scale;
+
+	// Loop over the three vertices of the triangle
 	for(int i=0; i<3; i++){
+
+		// find the midpoint
 		x_tmp = (face_tmp.v[i].x + face_tmp.v[(i+1)%3].x)/2;
 		y_tmp = (face_tmp.v[i].y + face_tmp.v[(i+1)%3].y)/2;
 		z_tmp = (face_tmp.v[i].z + face_tmp.v[(i+1)%3].z)/2;
+
+		// project the point to the sphere
 		scale = radius/sqrtf(x_tmp*x_tmp + y_tmp*y_tmp + z_tmp*z_tmp);
+
+		// store the result
 		v_tmp[i].x = x_tmp*scale;
 		v_tmp[i].y = y_tmp*scale;
 		v_tmp[i].z = z_tmp*scale;
 	}
 }
 
-__global__ void refine_icosphere_naive_kernal(triangle * faces, const float radius, const unsigned int depth) {
+/*******************************************************************************
+ * Function:        refine_icosphere_naive_kernel
+ *
+ * Description:     This is a naive kernel in which refines the icosphere i.e. 
+ * 					increase the depth of the icosphere by one. Let us say we want
+ * 					the icosphere to depth "d+1", then the array of faces passed to the
+ * 					kernel should contain the icosphere faces corresponding to the depth
+ * 					"d". Note that for a depth "d" the size of faces array is:
+ * 							size of faces array  = 20*4^(d) * sizeof(triangle).
+ * 					Note: Size of "triangle" is 36 bytes. 
+ * 					Hence it is important to make sure that the "faces" passed to 
+ * 					the kernel should already have enough memory allocated to it.
+ *
+ *					The array "faces" contains the faces of icosphere corresponding to the 
+ *					depth "d". 
+ *
+ *					Let us say th_len = 20*4^(d).
+ *
+ *					In this kernel each thread operates on one face and generate 4 new 
+ *					faces and stores the result in the "faces" array passed to it.
+ *
+ *					Say a thread "i" is working on the data faces[i]. Then the thread "i"
+ *					finds the mid point of the triangle "faces[i]" as shown in the following
+ *					diagram.
+ *
+ *									         P0
+ *									        / \
+ *									  V[0] *---* V[2]
+ *									      / \ / \
+ *									    P1---*---P2
+ *									         V[1]
+ *
+ *					Where:
+ *							P0 = faces[i].v[0], P1 = faces[i].v[1], P2 = faces[i].v[2]
+ * 					Now thread "i" stores the result back to the "faces" array in following
+ * 					manner:
+ * 						faces[i]				= triangle P0, V[0], V[2]
+ * 						faces[th_len + 3*i] 	= triangle V[0], P1, V[1]
+ * 						faces[th_len + 3*i+1] 	= triangle P2, V[1], V[2]
+ * 						faces[th_len + 3*i+2] 	= triangle V[0], V[1], V[2]
+ *
+ * 					Hence this Naive kernel updates the INPUT ARRAY itelf!
+ *
+ * Arguments:       triangle faces: The array of faces for depth 'd'
+ *					const float radius: The radius of the sphere
+ *					const unsigned int depth: The depth of the current icosphere i.e. 'd'.
+ *
+ * Return Values:   None
+*******************************************************************************/
+__global__ void refine_icosphere_naive_kernel(triangle * faces, const float radius, const unsigned int depth) {
 
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -175,17 +269,29 @@ __global__ void refine_icosphere_naive_kernal(triangle * faces, const float radi
 
 }
 
+/*******************************************************************************
+ * Function:        cudacall_icosphere_naive
+ *
+ * Description:     This calls the naive kernel repeatedly to generate the icosphere
+ 					of depth "max_depth". Once the icosphere gneeration is over TODO
+ *
+ * Arguments:       triangle faces: The array of faces for depth 'd'
+ *					const float radius: The radius of the sphere
+ *					const unsigned int depth: The depth of the current icosphere i.e. 'd'.
+ *
+ * Return Values:   None
+*******************************************************************************/
 void cudacall_icosphere_naive(int thread_num) {
 	// each thread works on one face
 	int n_blocks, ths;
 	for(int i=0; i<max_depth; i++){
 		ths = 20*pow(4, i);
 		n_blocks = std::min(65535, (ths + thread_num  - 1) / thread_num);
-		refine_icosphere_naive_kernal<<<n_blocks, thread_num>>>(dev_faces, radius, i);
+		refine_icosphere_naive_kernel<<<n_blocks, thread_num>>>(dev_faces, radius, i);
 	}
 	int len = 3*faces_length;
 	n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-	kernal_fill_sums_inds<<<n_blocks, thread_num>>>((vertex *)pointers_faces[ind2_faces], dev_face_sums, dev_face_vert_ind, len);
+	kernel_fill_sums_inds<<<n_blocks, thread_num>>>((vertex *)pointers_faces[ind2_faces], dev_face_sums, dev_face_vert_ind, len);
 }
 
 
@@ -218,7 +324,7 @@ __device__ void sub_triangle_center(triangle face_tmp, vertex * v_tmp, triangle 
 __device__ func_ptr_sub_triangle_t funcs_list[4] = {sub_triangle_top, sub_triangle_left, sub_triangle_right, sub_triangle_center};
 
 
-__global__ void refine_icosphere_kernal(triangle * faces, float * sums, const float radius, const unsigned int th_len, triangle * faces_out) {
+__global__ void refine_icosphere_kernel(triangle * faces, float * sums, const float radius, const unsigned int th_len, triangle * faces_out) {
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
@@ -246,15 +352,15 @@ void cudacall_icosphere(int thread_num) {
 		n_blocks = std::min(65535, (ths + 4*thread_num  - 1) / thread_num);
 		ind1 = i%2;
 		ind2_faces = (i+1)%2;
-		refine_icosphere_kernal<<<n_blocks, thread_num>>>(pointers_faces[ind1], dev_face_sums, radius, ths, pointers_faces[ind2_faces]);
+		refine_icosphere_kernel<<<n_blocks, thread_num>>>(pointers_faces[ind1], dev_face_sums, radius, ths, pointers_faces[ind2_faces]);
 	}
 	int len = 3*faces_length;
 	n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-	kernal_fill_sums_inds<<<n_blocks, thread_num>>>((vertex *)pointers_faces[ind2_faces], dev_face_sums, dev_face_vert_ind, len);
+	kernel_fill_sums_inds<<<n_blocks, thread_num>>>((vertex *)pointers_faces[ind2_faces], dev_face_sums, dev_face_vert_ind, len);
 }
 
 __global__
-void kernal_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length){
+void kernel_fill_sums_inds(vertex * vs, float * sums, int * inds, const unsigned int vertices_length){
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
@@ -296,7 +402,7 @@ void dev_merge(float * s, float * r, int * ind, int * ind_res, unsigned int idx,
 }
 
 __global__
-void kernal_merge_navie_sort(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
+void kernel_merge_navie_sort(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
 
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -311,7 +417,7 @@ void kernal_merge_navie_sort(float * sums, float * res, int * ind, int * ind_res
 }
 
 __global__
-void kernal_merge_sort(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
+void kernel_merge_sort(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
 
 	__shared__ float sh_sums[1024];
 	__shared__ float sh_res[1024];
@@ -377,7 +483,7 @@ void get_last_smallest(float * arr, int len, float a, int * res_ls)
 
 
 __global__
-void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
+void kernel_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, const unsigned int length, const unsigned int r){
 	
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -426,7 +532,7 @@ void kernal_merge_chuncks(float * sums, float * res, int * ind, int * ind_res, c
 }
 
 __global__
-void kernal_mark_duplicates(vertex * v, float * sums, int * ind, int * ind_res, int length){
+void kernel_mark_duplicates(vertex * v, float * sums, int * ind, int * ind_res, int length){
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 	
@@ -460,7 +566,7 @@ void kernal_mark_duplicates(vertex * v, float * sums, int * ind, int * ind_res, 
 }
 
 __global__
-void kernal_count_shifts(int * inds, int * inds_res, int length){
+void kernel_count_shifts(int * inds, int * inds_res, int length){
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 	
@@ -489,7 +595,7 @@ void kernal_count_shifts(int * inds, int * inds_res, int length){
 }
 
 __global__
-void kernal_prefix_sum(int * inds, int * inds_res, int length, const unsigned int stride){
+void kernel_prefix_sum(int * inds, int * inds_res, int length, const unsigned int stride){
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 	
@@ -508,7 +614,7 @@ void kernal_prefix_sum(int * inds, int * inds_res, int length, const unsigned in
 }
 
 __global__ 
-void kernal_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shifts, int length, float radius){
+void kernel_fill_vertices(vertex * v_in, vertex * v_out, int * inds, int * shifts, int length, float radius){
 	
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
@@ -539,7 +645,7 @@ void cudacall_naive_fill_vertices(int thread_num){
 		ind2_sums = (i+1)%2;
 		ind2_inds = ind2_sums;
 		unsigned int r = pow(2, i+1);
-		kernal_merge_navie_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
+		kernel_merge_navie_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
 
 	}
 	cuda_remove_duplicates(thread_num);
@@ -556,7 +662,7 @@ void cudacall_fill_vertices(int thread_num) {
 		ind2_sums = (i+1)%2;
 		ind2_inds = ind2_sums;
 		unsigned int r = pow(2, i+1);
-		kernal_merge_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
+		kernel_merge_sort<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
 
 	}
 
@@ -567,7 +673,7 @@ void cudacall_fill_vertices(int thread_num) {
 		ind2_sums = (ind2_sums+1)%2;
 		ind2_inds = ind2_sums;
 		unsigned int r = pow(2, i+1)*1024;
-		kernal_merge_chuncks<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
+		kernel_merge_chuncks<<<n_blocks, thread_num>>>(pointers_sums[ind1], pointers_sums[ind2_sums], pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
 	}
 
 	cuda_remove_duplicates(thread_num);
@@ -581,12 +687,12 @@ void cuda_remove_duplicates(int thread_num){
 	// update the vertices position
 	n_blocks = std::min(65535, ((int)len + thread_num  - 1) / thread_num);
 	int out = (ind2_faces + 1) %2;
-	kernal_update_faces<<<n_blocks, thread_num>>>((vertex *)pointers_faces[ind2_faces], (vertex *)pointers_faces[out], pointers_inds[ind2_inds], len);
+	kernel_update_faces<<<n_blocks, thread_num>>>((vertex *)pointers_faces[ind2_faces], (vertex *)pointers_faces[out], pointers_inds[ind2_inds], len);
 	ind2_faces = out;
 
 	// mark the duplicate vertices
 	out  = (ind2_inds + 1)%2;
-	kernal_mark_duplicates<<<n_blocks, thread_num>>>
+	kernel_mark_duplicates<<<n_blocks, thread_num>>>
 							((vertex *)pointers_faces[ind2_faces], pointers_sums[ind2_sums], pointers_inds[ind2_inds], pointers_inds[out], len);
 	ind2_inds = out;
 
@@ -594,7 +700,7 @@ void cuda_remove_duplicates(int thread_num){
 
 	// count the shift required.
 	out  = (ind2_inds + 1)%2;
-	kernal_count_shifts<<<n_blocks, thread_num>>>
+	kernel_count_shifts<<<n_blocks, thread_num>>>
 							(pointers_inds[ind2_inds], pointers_inds[out], len);
 	pointers_inds[ind2_inds] = dev_face_vert_ind_cpy2;
 	ind2_inds = out;
@@ -607,15 +713,15 @@ void cuda_remove_duplicates(int thread_num){
 		ind1 = (1+ind1)%2;
 		ind2_inds = (ind2_inds+1)%2;
 		unsigned int r = pow(2, i);
-		kernal_prefix_sum<<<n_blocks, thread_num>>>(pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
+		kernel_prefix_sum<<<n_blocks, thread_num>>>(pointers_inds[ind1], pointers_inds[ind2_inds], len, r);
 	}
 	
 	// fill the vertices now
-	kernal_fill_vertices<<<n_blocks, thread_num>>>((vertex *) pointers_faces[ind2_faces], dev_vertices_ico, markers, pointers_inds[ind2_inds], len, radius);
+	kernel_fill_vertices<<<n_blocks, thread_num>>>((vertex *) pointers_faces[ind2_faces], dev_vertices_ico, markers, pointers_inds[ind2_inds], len, radius);
 }
 
 __global__
-void kernal_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length){
+void kernel_update_faces(vertex * f_in, vertex * f_out, int * inds, const unsigned int vertices_length){
 	unsigned int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	const unsigned int numthrds = blockDim.x * gridDim.x;
 
