@@ -174,7 +174,7 @@ void time_profile_gpu(bool verbose, float * res){
     }
 
 //    START_TIMER();
-////        optimal_cudacall_gravitational(512);
+// //        optimal_cudacall_gravitational(512);
 //        naive_cudacall_gravitational(512);
 //    STOP_RECORD_TIMER(naive_gpu_time_gravitational);
 
@@ -182,7 +182,7 @@ void time_profile_gpu(bool verbose, float * res){
     START_TIMER();
 //        optimal_cudacall_gravitational(256);
 //        optimal_cudacall_gravitational3();
-        optimal_cudacall_gravitational4();
+        optimal_cudacall_gravitational3();
     STOP_RECORD_TIMER(gpu_time_gravitational);
 
 
@@ -359,8 +359,6 @@ void export_tmp(){
 *******************************************************************************/
 void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res){
 
-
-
 	init_vars(depth, radius);
 	allocate_cpu_mem(verbose);
 	init_icosphere();
@@ -381,7 +379,7 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
 
 //	/************************** TMP *****************************/
 //
-//	export_tmp();
+	export_tmp();
 //	/************************************************************/
 
 	 // if(verbose)
@@ -423,8 +421,6 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
  * Return Values:   int 1 if code executes successfully else 0.
 *******************************************************************************/
 int main(int argc, char **argv) {
-
-	cout << sizeof(intL) << endl;
 
 	// TA_Utilities::select_coldest_GPU();
 	if(check_args(argc, argv))

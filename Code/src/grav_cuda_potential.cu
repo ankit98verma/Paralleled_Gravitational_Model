@@ -617,152 +617,152 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
 }
 
 
-__global__
-void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U){
+// __global__
+// void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U){
 
 
-    int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
-    int tid = threadIdx.x;
-    int blk_hlf_dim = blockDim.x/2;
+//     int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
+//     int tid = threadIdx.x;
+//     int blk_hlf_dim = blockDim.x/2;
 
 
-    int vertex_index = thread_index-blk_hlf_dim*blockIdx.x;
-    if(tid>=blk_hlf_dim)
-        vertex_index = vertex_index-blk_hlf_dim;
+//     int vertex_index = thread_index-blk_hlf_dim*blockIdx.x;
+//     if(tid>=blk_hlf_dim)
+//         vertex_index = vertex_index-blk_hlf_dim;
 
 
-    __shared__ float dev_VW[21*22*32];
+//     __shared__ float dev_VW[21*22*32];
 
-    // Define pseudo coefficients
-    float Radius_sq = powf(radius,2);
-    float rho = powf(eq_R,2)/Radius_sq;
+//     // Define pseudo coefficients
+//     float Radius_sq = powf(radius,2);
+//     float rho = powf(eq_R,2)/Radius_sq;
 
-    float x0 = eq_R*dev_vertices[vertex_index].x/Radius_sq;
-    float y0 = eq_R*dev_vertices[vertex_index].y/Radius_sq;
-    float z0 = eq_R*dev_vertices[vertex_index].z/Radius_sq;
+//     float x0 = eq_R*dev_vertices[vertex_index].x/Radius_sq;
+//     float y0 = eq_R*dev_vertices[vertex_index].y/Radius_sq;
+//     float z0 = eq_R*dev_vertices[vertex_index].z/Radius_sq;
 
-    // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
-    int n_coeffi = (n_sph+1)*(n_sph+2);
+//     // Calculate zonal terms V(n, 0). Set W(n,0)=0.0
 
-    if (tid<blk_hlf_dim)
-        dev_VW[tid*n_coeffi + 0*(n_sph+2)+0] = eq_R/radius;
-    else
-        dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-0)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+//     if (tid<blk_hlf_dim)
+//         dev_VW[tid*(n_sph+1)*(n_sph+2) + 0*(n_sph+2)+0] = eq_R/radius;
+//     else
+//         dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-0)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
 
-    __syncthreads();
+//     __syncthreads();
 
-    if (tid<blk_hlf_dim)
-        dev_VW[tid*n_coeffi + 1*(n_sph+2)+0] = z0 *eq_R/radius;
-    else
-        dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-1)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+//     if (tid<blk_hlf_dim)
+//         dev_VW[tid*(n_sph+1)*(n_sph+2) + 1*(n_sph+2)+0] = z0 *eq_R/radius;
+//     else
+//         dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-1)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
 
-    __syncthreads();
+//     __syncthreads();
 
-    if (tid<blk_hlf_dim){
-        for (int n=2; n<n_sph+1; n++){
-            dev_VW[tid*n_coeffi + n*(n_sph+2)+0] = ((2*n-1)*z0*dev_VW[tid*n_coeffi + (n-1)*(n_sph+2)+0] - (n-1)*rho*dev_VW[tid*n_coeffi + (n-2)*(n_sph+2)+0])/n;
-//            __syncthreads();
-        } // Eqn 3.30
-    }
-    else{
-        for (int n=2; n<n_sph+1; n++){
-            dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-n)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
-        } // Eqn 3.30
+//     if (tid<blk_hlf_dim){
+//         for (int n=2; n<n_sph+1; n++){
+//             dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+0] = ((2*n-1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-1)*(n_sph+2)+0] - (n-1)*rho*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-2)*(n_sph+2)+0])/n;
+// //            __syncthreads();
+//         } // Eqn 3.30
+//     }
+//     else{
+//         for (int n=2; n<n_sph+1; n++){
+//             dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-n)*(n_sph+2)+ (n_sph+1-0)] = 0.0;
+//         } // Eqn 3.30
 
-    }
+//     }
 
-    //Calculate tesseral and sectoral terms
-    for (int m = 1; m < n_sph + 1; m++){
-        // Eqn 3.29
-        if(tid<blk_hlf_dim){
-            dev_VW[tid*n_coeffi + m*(n_sph+2)+m] = (2*m-1)*(x0*dev_VW[tid*n_coeffi + (m-1)*(n_sph+2)+m-1]- y0*dev_VW[(tid)*n_coeffi + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))]);
-//            __syncthreads();*n_coeffi
-        }
-        else{
-            dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))] = (2*m-1)*(x0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))] + y0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (m-1)*(n_sph+2)+m-1]);
-//            __syncthreads();
-        }
-    }
+//     //Calculate tesseral and sectoral terms
+//     for (int m = 1; m < n_sph + 1; m++){
+//         // Eqn 3.29
+//         if(tid<blk_hlf_dim){
+//             dev_VW[tid*(n_sph+1)*(n_sph+2) + m*(n_sph+2)+m] = (2*m-1)*(x0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (m-1)*(n_sph+2)+m-1]- y0*dev_VW[(tid)*(n_sph+1)*(n_sph+2) + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))]);
+// //            __syncthreads();
+//         }
+//         else{
+//             dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))] = (2*m-1)*(x0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m-1))*(n_sph+2)+ (n_sph+1-(m-1))] + y0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (m-1)*(n_sph+2)+m-1]);
+// //            __syncthreads();
+//         }
+//     }
 
-    if(tid<blk_hlf_dim){
-        for (int m = 1; m < n_sph + 1; m++){
-            // n=m+1 (only one term)
-            if (m < n_sph){
-                dev_VW[tid*n_coeffi + (m+1)*(n_sph+2)+m] = (2*m+1)*z0*dev_VW[tid*n_coeffi + m*(n_sph+2)+m];
+//     if(tid<blk_hlf_dim){
+//         for (int m = 1; m < n_sph + 1; m++){
+//             // n=m+1 (only one term)
+//             if (m < n_sph){
+//                 dev_VW[tid*(n_sph+1)*(n_sph+2) + (m+1)*(n_sph+2)+m] = (2*m+1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + m*(n_sph+2)+m];
 
-//                __syncthreads();
+// //                __syncthreads();
 
-            }
+//             }
 
-            for (int n = m+2; n<n_sph+1; n++){
-                dev_VW[tid*n_coeffi + n*(n_sph+2)+m] = ((2*n-1)*z0*dev_VW[tid*n_coeffi + (n-1)*(n_sph+2)+m]-(n+m-1)*rho*dev_VW[tid*n_coeffi + (n-2)*(n_sph+2)+m])/(n-m);
-//                __syncthreads();
-            }
-        }
-    }
-    else{
-        for (int m = 1; m < n_sph + 1; m++){
-            // n=m+1 (only one term)
-            if (m < n_sph){
-                dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m+1))*(n_sph+2)+ (n_sph+1-(m))] = (2*m+1)*z0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))];
-//                __syncthreads();
+//             for (int n = m+2; n<n_sph+1; n++){
+//                 dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+m] = ((2*n-1)*z0*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-1)*(n_sph+2)+m]-(n+m-1)*rho*dev_VW[tid*(n_sph+1)*(n_sph+2) + (n-2)*(n_sph+2)+m])/(n-m);
+// //                __syncthreads();
+//             }
+//         }
+//     }
+//     else{
+//         for (int m = 1; m < n_sph + 1; m++){
+//             // n=m+1 (only one term)
+//             if (m < n_sph){
+//                 dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m+1))*(n_sph+2)+ (n_sph+1-(m))] = (2*m+1)*z0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(m))*(n_sph+2)+ (n_sph+1-(m))];
+// //                __syncthreads();
 
-            }
+//             }
 
-            for (int n = m+2; n<n_sph+1; n++){
-                dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))] = ((2*n-1)*z0*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n-1))*(n_sph+2)+ (n_sph+1-(m))]-(n+m-1)*rho*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n-2))*(n_sph+2)+ (n_sph+1-(m))])/(n-m);
-//                __syncthreads();
-            }
-        }
-    }
-    __syncthreads();
+//             for (int n = m+2; n<n_sph+1; n++){
+//                 dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))] = ((2*n-1)*z0*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n-1))*(n_sph+2)+ (n_sph+1-(m))]-(n+m-1)*rho*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n-2))*(n_sph+2)+ (n_sph+1-(m))])/(n-m);
+// //                __syncthreads();
+//             }
+//         }
+//     }
+//     __syncthreads();
 
-    __shared__ float shmem[2*32]; //stores CV+SW
-    shmem[tid] = 0.0; //potential
+//     __shared__ float shmem[2*32]; //stores CV+SW
+//     shmem[tid] = 0.0; //potential
 
-    // Calculate potential
-    float C = 0; // Cnm coeff
-    float S = 0; // Snm coeff
-    float N = 0; // normalisation number
-    float p = 1.0;
-//    U[vertex_index] = 0.0; //potential
-    for (int m=0; m<n_sph+1; m++){
-        for (int n = m; n<n_sph+1; n++){
-//            C = 0;
-            S = 0;
-            if (m==0){
-                N = sqrtf(2*n+1);
-                C = N*dev_coeff[n*(n_sph+2)+0];
-            }
-            else {
-                p = 1.0;
-                // gpu_facprod(n,m,&p);
-                for (int i = n-m+1; i<=n+m; i++){
-                    p = p/i;
-                }
-                N = sqrtf((2)*(2*n+1)*p);
-                C = N*dev_coeff[n*(n_sph+2)+m];
-                S = N*dev_coeff[(n_sph-n)*(n_sph+2)+ (n_sph-m+1)];
-            }
-            if(tid<blk_hlf_dim){
-                shmem[tid] = shmem[tid] + C*dev_VW[tid*n_coeffi + n*(n_sph+2)+m];
-                __syncthreads();
-            }
-            else{
-                shmem[tid] = shmem[tid] + S*dev_VW[(tid-blk_hlf_dim)*n_coeffi + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))];
-            // Calculation of the Gravitational Potential Calculation model
-            __syncthreads();
-            }
-        }
-    }
+//     // Calculate potential
+//     float C = 0; // Cnm coeff
+//     float S = 0; // Snm coeff
+//     float N = 0; // normalisation number
+//     float p = 1.0;
+// //    U[vertex_index] = 0.0; //potential
+//     for (int m=0; m<n_sph+1; m++){
+//         for (int n = m; n<n_sph+1; n++){
+// //            C = 0;
+//             S = 0;
+//             if (m==0){
+//                 N = sqrtf(2*n+1);
+//                 C = N*dev_coeff[n*(n_sph+2)+0];
+//             }
+//             else {
+//                 p = 1.0;
+//                 // gpu_facprod(n,m,&p);
+//                 for (int i = n-m+1; i<=n+m; i++){
+//                     p = p/i;
+//                 }
+//                 N = sqrtf((2)*(2*n+1)*p);
+//                 C = N*dev_coeff[n*(n_sph+2)+m];
+//                 S = N*dev_coeff[(n_sph-n)*(n_sph+2)+ (n_sph-m+1)];
+//             }
+//             if(tid<blk_hlf_dim){
+//                 shmem[tid] = shmem[tid] + C*dev_VW[tid*(n_sph+1)*(n_sph+2) + n*(n_sph+2)+m];
+//                 __syncthreads();
+//             }
+//             else{
+//                 shmem[tid] = shmem[tid] + S*dev_VW[(tid-blk_hlf_dim)*(n_sph+1)*(n_sph+2) + (n_sph-(n))*(n_sph+2)+ (n_sph+1-(m))];
+//             // Calculation of the Gravitational Potential Calculation model
+//             __syncthreads();
+//             }
+//         }
+//     }
 
-    if(tid<blk_hlf_dim){
-        U[vertex_index] = shmem[tid] + shmem[tid+blk_hlf_dim];
-        __syncthreads();
-        U[vertex_index] = U[vertex_index]*mhu/R_eq;
-    }
+//     if(tid<blk_hlf_dim){
+//         U[vertex_index] = shmem[tid] + shmem[tid+blk_hlf_dim];
+//         __syncthreads();
+//         U[vertex_index] = U[vertex_index]*mhu/R_eq;
+//     }
 
-}
+// }
+>>>>>>> 3a0262c98b88f0e107777ea2514a34888163ab17
 
 
 void optimal_cudacall_gravitational1(int thread_num){
@@ -802,6 +802,7 @@ void optimal_cudacall_gravitational1(int thread_num){
 
 
 void optimal_cudacall_gravitational2(int thread_num){
+
 
 //    int n_blocks = ceil(vertices_length*1.0/thread_num);
 //    n_blocks = std::min(65535, n_blocks);
@@ -864,7 +865,7 @@ void optimal_cudacall_gravitational4(){
     int n_blocks = ceil(len*1.0/32);
     n_blocks = std::min(65535,  n_blocks);
     cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
-    cudaFuncSetCacheConfig(optimal_kernel_gravitational4, cudaFuncCachePreferShared);
-    optimal_kernel_gravitational4<<<n_blocks, 64>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
+    // cudaFuncSetCacheConfig(optimal_kernel_gravitational4, cudaFuncCachePreferShared);
+    // optimal_kernel_gravitational4<<<n_blocks, 64>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
 }
 

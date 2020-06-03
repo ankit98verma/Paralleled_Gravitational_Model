@@ -28,12 +28,13 @@ using namespace std;
 /*Reference: http://www.songho.ca/opengl/gl_sphere.html*/
 float const H_ANG = PI/180*72;
 float const ELE_ANG = atanf(1.0f / 2);	// elevation = 26.565 degree
-intL curr_faces_count;
+unsigned int curr_faces_count;
 
 triangle * faces_copy;
 
 
 /* Decleration of local functions */
+// int partition_sum(void * arr, int low, int high);
 void get_coefficients();
 
 /*******************************************************************************
@@ -204,9 +205,9 @@ void create_icoshpere(){
 	for(unsigned int j=1; j<=max_depth; j++){
 
 		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
-		intL a = curr_faces_count;
+		unsigned int a = curr_faces_count;
 		// go through every face and divide the face into four equal parts
-		for(intL i=0; i<a; i++){
+		for(unsigned int i=0; i<a; i++){
 			triangle tri_i = faces[i];
 			/* compute 3 new vertices by splitting half on each edge
 	        *         P0
@@ -251,7 +252,7 @@ void export_csv(triangle * f, string filename1, string filename2, bool verbose){
 	ofstream obj_stream;
 	obj_stream.open(filename1);
 	obj_stream << "x, y, z" << endl;
-	for(intL i=0; i< vertices_length; i++){
+	for(unsigned int i=0; i< vertices_length; i++){
 		obj_stream << vertices[i].x << ", " << vertices[i].y << ", " << vertices[i].z << endl;
 	}
 	obj_stream.close();
@@ -259,7 +260,7 @@ void export_csv(triangle * f, string filename1, string filename2, bool verbose){
 	ofstream obj_stream2;
 	obj_stream2.open(filename2);
 	obj_stream2 << "x1, y1, z1, x2, y2, z2" << endl;
-	for(intL i=0; i< curr_faces_count; i++){
+	for(unsigned int i=0; i< curr_faces_count; i++){
 		triangle triangle_tmp = f[i];
 		for(int j=0; j<3;j++)
 			obj_stream2 << 	triangle_tmp.v[j].x << ", " << triangle_tmp.v[j].y << ", " << triangle_tmp.v[j].z << ", " <<
@@ -276,13 +277,13 @@ void fill_vertices(){
 	vertices[0].x = all_vs[0].x;	
 	vertices[0].y = all_vs[0].y;
 	vertices[0].z = all_vs[0].z;
-	intL c_start = 0, c_end = 1;
-	for(intL i=1; i<3*faces_length; i++){
+	unsigned int c_start = 0, c_end = 1;
+	for(unsigned int i=1; i<3*faces_length; i++){
 		float sum_i = all_vs[i].x+all_vs[i].y+all_vs[i].z;
 		float sum_i_1 = all_vs[i-1].x+all_vs[i-1].y+all_vs[i-1].z;
 		if((sum_i - sum_i_1) <= epsilon){
 			is_add = 1;
-			for(intL j=c_start; j<c_end; j++){
+			for(unsigned int j=c_start; j<c_end; j++){
 				float t = 	fabs(vertices[j].x - all_vs[i].x) + fabs(vertices[j].y - all_vs[i].y) +
 						fabs(vertices[j].z - vertices[j].z);
 				if(t <= epsilon){
@@ -304,12 +305,12 @@ void fill_vertices(){
 	memcpy(faces, faces_copy, faces_length*sizeof(triangle));
 }
 
-intL partition_sum(void * arr_in, intL low, intL high){
+int partition_sum(void * arr_in, int low, int high){
 	vertex * arr = (vertex *)arr_in;
     vertex pivot = arr[high]; // pivot
-    intL i = (low - 1); // Index of smaller element
+    int i = (low - 1); // Index of smaller element
   	vertex tmp;
-    for (intL j = low; j <= high - 1; j++)
+    for (int j = low; j <= high - 1; j++)
     {
         // If current element is smaller than the pivot
         float sum_j = arr[j].x+ arr[j].y + arr[j].z;
@@ -328,11 +329,11 @@ intL partition_sum(void * arr_in, intL low, intL high){
     return (i + 1);
 }
 
-void quickSort(void * arr, intL low, intL high, intL partition_fun(void *, intL, intL)){
+void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int)){
 	if(low < high){
 		/* pi is partitioning index, arr[p] is now
 	    at right place */
-	    intL pi = partition_fun(arr, low, high);
+	    int pi = partition_fun(arr, low, high);
 
 	    // Separately sort elements before
 	    // partition and after partition
@@ -347,7 +348,7 @@ void quickSort(void * arr, intL low, intL high, intL partition_fun(void *, intL,
  *
  * Description:     computes (n+m)!/(n-m)!
  *
- * Arguments:       intL n, intL m- from geoppotential coefficients
+ * Arguments:       int n, int m- from geoppotential coefficients
  *
  * Return Values:   float p = (n+m)!/(n-m)!
  *
@@ -358,7 +359,7 @@ void quickSort(void * arr, intL low, intL high, intL partition_fun(void *, intL,
 float facprod(int n, int m){
     float p = 1.0; // initialisation of p
 
-    for (intL i = n-m+1; i<=n+m; i++)
+    for (int i = n-m+1; i<=n+m; i++)
         p = p/i;
 
     return p;
@@ -542,7 +543,7 @@ float spherical_harmonics(vertex R_vec){
 *******************************************************************************/
 
 void get_grav_pot(){
-    for (intL i=0; i<vertices_length; i++){
+    for (unsigned int i=0; i<vertices_length; i++){
         potential[i] = spherical_harmonics(vertices[i]);
     }
 }
@@ -557,5 +558,4 @@ void free_cpu_memory(){
 	free(vertices);
 	free(potential);
 }
-
 

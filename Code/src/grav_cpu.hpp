@@ -46,16 +46,16 @@ typedef struct triangle triangle;
 
 /**** Variables related to Icosphere ****/
 
-intL partition_sum(void * arr, intL low, intL high);
+int partition_sum(void * arr, int low, int high);
 
 // faces of the icosphere
 GLOBAL triangle * faces;
 GLOBAL triangle faces_init[ICOSPHERE_INIT_FACE_LEN];
-GLOBAL intL faces_length;
+GLOBAL unsigned int faces_length;
 
 // vertices of the icosphere
 GLOBAL vertex * vertices;
-GLOBAL intL vertices_length;
+GLOBAL unsigned int vertices_length;
 
 // The depth of the icosphere
 GLOBAL unsigned int max_depth;
@@ -77,10 +77,10 @@ void init_icosphere();
 
 void create_icoshpere();
 void fill_vertices();
-void quickSort_points(intL low, intL high);
+void quickSort_points(int low, int high);
 void fill_common_theta();
 
-void quickSort(void * arr, intL low, intL high, intL partition_fun(void *, intL, intL));
+void quickSort(void * arr, int low, int high, int partition_fun(void *, int, int));
 
 void export_csv(triangle * f, string filename1, string filename2, bool verbose);
 
