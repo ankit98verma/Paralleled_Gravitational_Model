@@ -2,7 +2,7 @@
  * CUDA blur
  */
 #ifndef _GRAV_CUDA_POTENTIAL_C_
-	#define _GRAV_CUDA_POTENTIAL_C_
+    #define _GRAV_CUDA_POTENTIAL_C_
 #endif
 
 #include "grav_cuda.cuh"
@@ -102,7 +102,7 @@ __device__ void naive_gpu_spherical_harmonics(float radius, const int n_sph, ver
     Computes the potential for every vertex in each thread.
     Effective when large number of vertices on the sphere- can then use GPU effectively
     Each thread handles each vertex independently
-    Number of thread/block = 256
+    Number of thread/block = 512
     */
 
     // 462 float array gets stores in the global memory and hence is slower than shared memory access.
@@ -248,9 +248,22 @@ void naive_cudacall_gravitational(int thread_num){
 __global__
 void optimal_kernel_gravitational1(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
 
-
-//    int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
-//    int potential_index = (blockIdx.x * blockDim.x + threadIdx.x)%231;
+    /*
+    Every block is aasigned to every vertex.
+    Threads/block = 256;
+    Every thread contains calculates one of the 231 terms used in the summation of the potential
+    shmem shares stores the 231 terms of the potential calculation
+    U[thread_index]  = summation of the 231 terms
+    U[thread_index]  = calculated from the reduction method #3
+    This method should give improved computational time when number of vertices on the sphere is small, even
+    though it wouldnt be a huge time savior.
+    In case of small number of vertices, GPU overload happens because of 256 threads assigned to each vertex.
+    No shared memory for V[21*21], W[21*21].
+    Max shared memory: 256*4bytes = 1KB
+    Drawback: Not very effective for higher number of vertices
+              Repeative computation of V, W in each thread which is actually common to all threads in a block.
+              Unnecessary global memory access for V,W to avoid thread divergence
+    */
 
     int potential_index = blockIdx.x;
 
@@ -338,16 +351,12 @@ void optimal_kernel_gravitational1(int g_vertices_length, float radius, float eq
         if (tid < s) {
             // conduct the summation
             shmem[tid] = shmem[tid] + shmem[tid + s];
-//                atomicAdd(&shmem[tid], shmem[tid + s]);
-        }
+       }
         // Sync threads after every stage of reduction
         __syncthreads();
     }
 
-//    U[potential_index] = shmem[0]*mhu/R_eq;
-    U[potential_index] = shmem[0];
-//        thread_index += blockDim.x * gridDim.x;
-//    }
+    U[potential_index] = shmem[0]*mhu/R_eq;
 
 }
 
@@ -355,9 +364,21 @@ void optimal_kernel_gravitational1(int g_vertices_length, float radius, float eq
 __global__
 void optimal_kernel_gravitational2(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
 
-
-//    int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
-//    int potential_index = (blockIdx.x * blockDim.x + threadIdx.x)%231;
+    /*
+    Every block is assigned to every vertex.
+    Threads/block = 256;
+    Every thread contains calculates one of the 231 terms used in the summation of the potential
+    shmem shares stores the 231 terms of the potential calculation
+    U[thread_index]  = summation of the 231 terms
+    U[thread_index]  = calculated from the reduction method #3
+    This method should give improved computational time when number of vertices on the sphere is small, even
+    though it wouldnt be a huge time savior.
+    In case of small number of vertices, GPU overload happens because of 256 threads assigned to each vertex.
+    Shared memory for V[21*21], W[21*21].
+    Max shared memory: (256 + 462 + 462)*4bytes ~ 4.7KB
+    Shared memory for V,W. Shared across threads in a block.
+    Advantages: Reduces the computational time immensely for less number of vertices.
+    */
 
     int potential_index = blockIdx.x;
 
@@ -764,7 +785,6 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
 // }
 
 
-
 void optimal_cudacall_gravitational1(int thread_num){
 
 //    int n_blocks = ceil(vertices_length*1.0/thread_num);
@@ -794,7 +814,7 @@ void optimal_cudacall_gravitational1(int thread_num){
     CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
     CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
-    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
+    optimal_kernel_gravitational1<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
     CUDA_CALL(cudaFree(dev_M));
     CUDA_CALL(cudaFree(dev_N));
 }
@@ -831,7 +851,7 @@ void optimal_cudacall_gravitational2(int thread_num){
     CUDA_CALL(cudaMalloc((void**) &dev_M, sizeof(int) * N_coeff));
     CUDA_CALL(cudaMemcpy(dev_N, N, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpy(dev_M, M, sizeof(int) * N_coeff, cudaMemcpyHostToDevice));
-    optimal_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
+    optimal_kernel_gravitational2<<<n_blocks, thread_num>>>(vertices_length, radius, R_eq, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential, dev_M, dev_N);
     CUDA_CALL(cudaFree(dev_M));
     CUDA_CALL(cudaFree(dev_N));
 }
