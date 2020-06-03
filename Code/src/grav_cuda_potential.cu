@@ -35,14 +35,19 @@ float* dev_potential;
  *
  * Return Values:   null
 *******************************************************************************/
-void cuda_cpy_input_data_potential(){
+void cuda_cpy_input_data_potential(int vertice_input_type){
     // GPU Coefficient file
     CUDA_CALL(cudaMalloc((void**) &dev_coeff, sizeof(float) * 2*N_coeff));
     CUDA_CALL(cudaMemcpy(dev_coeff, coeff, sizeof(float) * 2*N_coeff, cudaMemcpyHostToDevice));
 
     // Vertices
     CUDA_CALL(cudaMalloc((void**) &dev_vertices, sizeof(vertex) * vertices_length));
-    CUDA_CALL(cudaMemcpy(dev_vertices, vertices, sizeof(vertex) * vertices_length, cudaMemcpyHostToDevice));
+    if(vertice_input_type){
+        CUDA_CALL(cudaMemcpy(dev_vertices, vertices, sizeof(vertex) * vertices_length, cudaMemcpyHostToDevice));
+    }
+    else {
+        CUDA_CALL(cudaMemcpy(dev_vertices, dev_vertices_ICO, sizeof(vertex) * vertices_length, cudaMemcpyDeviceToDevice));
+    }
 
     // OUTput potential - to be compared with CPU values
     CUDA_CALL(cudaMalloc((void**) &dev_potential, sizeof(float) * vertices_length));
@@ -211,23 +216,6 @@ void naive_kernel_gravitational(int g_vertices_length, float g_radius, const int
 }
 
 /*******************************************************************************
- * Function:        naive_cudacall_gravitational
- *
- * Description:     CPU call for Naive kernel implementation
- *
- * Arguments:       int thread_index: stores the vertex index actually
- *
- * Return Values:   null
-*******************************************************************************/
-void naive_cudacall_gravitational(int thread_num){
-
-    int len = vertices_length;
-    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
-    naive_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
-}
-
-
-/*******************************************************************************
  * Function:        optimal_kernel_gravitational
  *
  * Description:     Optimal implementation: Attempt 1
@@ -360,6 +348,24 @@ void optimal_kernel_gravitational1(int g_vertices_length, float radius, float eq
 }
 
 
+
+/*******************************************************************************
+ * Function:        optimal_kernel_gravitationa2
+ *
+ * Description:     Optimal implementation: Attempt 2
+ *
+ * Arguments:       int g_vertices_length: Total number of vertices on the sphere
+ *                  float radius: radius of the sphere
+ *                  float eq_R: Radius of the Earth
+ *                  const int n_sph: degree of potential
+ *                  float* dev_coeff: coefficient matrix
+ *                  vertex* dev_vertices: vertices on the sphere
+ *                  float* U: potential
+ *                  float* M: M stores the indice for Vnm
+ *                  float* N: N stores the indice for Vnm
+ *
+ * Return Values:   null
+*******************************************************************************/
 __global__
 void optimal_kernel_gravitational2(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U, int* M, int* N){
 
@@ -492,9 +498,40 @@ void optimal_kernel_gravitational2(int g_vertices_length, float radius, float eq
 }
 
 
+
+/*******************************************************************************
+ * Function:        optimal_kernel_gravitational
+ *
+ * Description:     Optimal implementation: Attempt 3
+ *
+ * Arguments:       int g_vertices_length: Total number of vertices on the sphere
+ *                  float radius: radius of the sphere
+ *                  float eq_R: Radius of the Earth
+ *                  const int n_sph: degree of potential
+ *                  float* dev_coeff: coefficient matrix
+ *                  vertex* dev_vertices: vertices on the sphere
+ *                  float* U: potential
+ *
+ * Return Values:   null
+*******************************************************************************/
 __global__
 void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U){
 
+    /*
+    Every block is assigned to 16 consecutive vertices.
+    Threads/block = 32;
+    First 16 threads conpute V for the 16 vertices.
+    Next 16 threads in the block compute W for the 16 vertices
+    This method should give improved computational time when fairly large number
+    of vertices on the sphere though it wouldnt be a huge time savior.
+    Shared memory for VW[21*22*16]
+    Max shared memory: (21*22*16)*4bytes ~ 28.875KB < 48KB
+    Shared memory for V,W. Shared across threads in a block.
+    Advantages: Reduces the computational time immensely for fairly large number of vertices.
+    Drawback: Thread warping because first 16 threads compute different from next 16 threads in the block
+
+    WHY 32 threads only::: Limited by the Shared memory
+    */
 
     int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
     int tid = threadIdx.x;
@@ -637,9 +674,39 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
 }
 
 
+/*******************************************************************************
+ * Function:        optimal_kernel_gravitational
+ *
+ * Description:     Optimal implementation: Attempt 4
+ *
+ * Arguments:       int g_vertices_length: Total number of vertices on the sphere
+ *                  float radius: radius of the sphere
+ *                  float eq_R: Radius of the Earth
+ *                  const int n_sph: degree of potential
+ *                  float* dev_coeff: coefficient matrix
+ *                  vertex* dev_vertices: vertices on the sphere
+ *                  float* U: potential
+ *
+ * Return Values:   null
+*******************************************************************************/
 // __global__
 // void optimal_kernel_gravitational4(int g_vertices_length, float radius, float eq_R, const int n_sph, float* dev_coeff, vertex* dev_vertices, float* U){
 
+    /*
+    Every block is assigned to 32 consecutive vertices.
+    Threads/block = 64;
+    First 16 threads conpute V for the 16 vertices.
+    Next 16 threads in the block compute W for the 16 vertices
+    This method should give improved computational time when fairly large number
+    of vertices on the sphere though it wouldnt be a huge time savior.
+    Shared memory for VW[21*22*32]
+    Max shared memory: (21*22*32)*4bytes ~ 57.75KB < 64KB
+    NOTE:::::::::: This would work if the shared memory can be expanded to 64 KB.
+    Shared memory for V,W. Shared across threads in a block.
+    Advantages: Reduces the computational time immensely for fairly large number of vertices.
+                No Thread warping because 32 threads do the same action
+                Couldnt verify due to limited shared memory :(
+    */
 
 //     int thread_index = (blockIdx.x * blockDim.x + threadIdx.x);
 //     int tid = threadIdx.x;
@@ -784,13 +851,36 @@ void optimal_kernel_gravitational3(int g_vertices_length, float radius, float eq
 // }
 
 
-void optimal_cudacall_gravitational1(int thread_num){
 
-//    int n_blocks = ceil(vertices_length*1.0/thread_num);
-//    n_blocks = std::min(65535, n_blocks);
+/*******************************************************************************
+ * Function:        naive_cudacall_gravitational
+ *
+ * Description:     CPU call for Naive kernel implementation
+ *
+ * Arguments:       int thread_index: stores the vertex index actually
+ *
+ * Return Values:   null
+*******************************************************************************/
+void naive_cudacall_gravitational(int thread_num){
 
     int len = vertices_length;
-//    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+
+    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
+    cout<<"\n Number of blocks \t"<<n_blocks<<'\n';
+    naive_kernel_gravitational<<<n_blocks, thread_num>>>(vertices_length, radius, N_SPHERICAL, dev_coeff, dev_vertices, dev_potential);
+}
+
+/*******************************************************************************
+ * Function:        optimal_cudacall_gravitational1
+ *
+ * Description:     CPU call for Optimal1 kernel implementation
+ *
+ * Arguments:       int thread_index: stores the vertex index actually
+ *
+ * Return Values:   null
+*******************************************************************************/
+void optimal_cudacall_gravitational1(int thread_num){
+    int len = vertices_length;
     int n_blocks = std::min(65535, len);
 
     int M[N_coeff];
@@ -818,15 +908,18 @@ void optimal_cudacall_gravitational1(int thread_num){
 }
 
 
-
+/*******************************************************************************
+ * Function:        optimal_cudacall_gravitational2
+ *
+ * Description:     CPU call for Optimal2 kernel implementation
+ *
+ * Arguments:       int thread_index: stores the vertex index actually
+ *
+ * Return Values:   null
+*******************************************************************************/
 void optimal_cudacall_gravitational2(int thread_num){
 
-
-//    int n_blocks = ceil(vertices_length*1.0/thread_num);
-//    n_blocks = std::min(65535, n_blocks);
-
     int len = vertices_length;
-//    int n_blocks = std::min(65535, (len + thread_num  - 1) / thread_num);
     int n_blocks = std::min(65535, len);
 
     int M[N_coeff];
@@ -854,14 +947,20 @@ void optimal_cudacall_gravitational2(int thread_num){
 }
 
 
-
+/*******************************************************************************
+ * Function:        optimal_cudacall_gravitational3
+ *
+ * Description:     CPU call for Optimal3 kernel implementation
+ *
+ * Arguments:       null
+ *
+ * Return Values:   null
+*******************************************************************************/
 void optimal_cudacall_gravitational3(){
 
     // Number of threads/ block = 32;
     // Number of vertices/block = 16;
     // Compute V, W in shared memory and separately
-
-
     int len = vertices_length;
     int n_blocks = ceil(len*1.0/16);
     n_blocks = std::min(65535,  n_blocks);
@@ -870,7 +969,15 @@ void optimal_cudacall_gravitational3(){
 }
 
 
-
+/*******************************************************************************
+ * Function:        optimal_cudacall_gravitational4
+ *
+ * Description:     CPU call for Optimal4 kernel implementation
+ *
+ * Arguments:       null
+ *
+ * Return Values:   null
+*******************************************************************************/
 void optimal_cudacall_gravitational4(){
 
     // Number of threads/ block = 64;

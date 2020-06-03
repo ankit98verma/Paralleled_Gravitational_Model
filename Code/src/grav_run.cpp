@@ -129,8 +129,15 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 		cuda_cpy_input_data();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
+	int tmp = 0;
+#ifdef CPU_GPU_ONLY
+	tmp = 1;
+#else
+	tmp = 0;
+#endif
+
 	START_TIMER();
-		cuda_cpy_input_data_potential();
+		cuda_cpy_input_data_potential(tmp);
 	STOP_RECORD_TIMER(gpu_time_indata_cpy_pot);
 
 	switch(ico_opt_level){
@@ -163,9 +170,11 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 		cuda_cpy_output_data();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy);
 
+#ifdef CPU_GPU_ONLY
 	if(verbose)
 	 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
 	verify_gpu_icosphere(verbose);
+#endif
 
     START_TIMER();
     	cudacall_fill_vertices(1024);
@@ -224,10 +233,11 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 		cuda_cpy_output_data_potential();
 	STOP_RECORD_TIMER(gpu_time_outdata_cpy_pot);
 
+#ifdef CPU_GPU_ONLY
 	if(verbose)
 		cout << "\n----------Verifying GPU Potential ----------\n" << endl;
 	verify_gpu_potential(verbose);
-
+#endif
 
 	if(verbose){
 		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy+ gpu_time_indata_cpy_pot);
@@ -262,13 +272,18 @@ void run(int depth, float radius, int ico_opt_level, int geo_opt_level, bool ver
 
 	cpu_res[0] = 0;
 	cpu_res[1] = 0;
+
+#if defined(CPU_ONLY) || defined(CPU_GPU_ONLY)
 	if(verbose)
 		cout << "\n----------Running CPU Code----------\n" << endl;
 	time_profile_cpu(verbose, cpu_res);
+#endif
 
+#if defined(GPU_ONLY) || defined(CPU_GPU_ONLY)
 	if(verbose)
 		cout << "\n----------Running GPU Code----------\n" << endl;
 	time_profile_gpu(verbose, ico_opt_level, geo_opt_level, gpu_res);
+#endif
 
 	float cpu_time = cpu_res[0] +  cpu_res[1];
 	float gpu_time = gpu_res[0] +  gpu_res[1];
@@ -315,8 +330,8 @@ int main(int argc, char **argv) {
 //		cout << "Exiting the code" << endl;
 //		return 0;
 //	}
-	int ico_opt_level = (bool)atoi(argv[3]);
-	int geo_opt_level = (bool)atoi(argv[4]);
+	int ico_opt_level = atoi(argv[3]);
+	int geo_opt_level = atoi(argv[4]);
 	if((bool)atoi(argv[2]))
 		cout << "Verbose ON" << endl;
 	else

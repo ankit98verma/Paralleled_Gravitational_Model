@@ -54,14 +54,72 @@ There are multiple approaches to find the terms and their summation for large nu
     Naive implementation of he CPU code in GPU.
     Computes the potential for every vertex in each thread.
     Effective when large number of vertices on the sphere- can then use GPU effectively
+    Each thread handles each vertex independently
+    Number of thread/block = 256
 
+(B) optimal_kernel_gravitational1
+    
+    Every block is aasigned to every vertex.
+    Threads/block = 256;
+    Every thread contains calculates one of the 231 terms used in the summation of the potential
+    shmem shares stores the 231 terms of the potential calculation
+    U[thread_index]  = summation of the 231 terms
+    U[thread_index]  = calculated from the reduction method #3
+    This method should give improved computational time when number of vertices on the sphere is small, even
+    though it wouldnt be a huge time savior.
+    In case of small number of vertices, GPU overload happens because of 256 threads assigned to each vertex.
+    No shared memory for V[21*21], W[21*21].
+    Max shared memory: 256*4bytes = 1KB
+    Drawback: Not very effective for higher number of vertices
+     
+(c) optimal_kernel_gravitational2
+	
+    Every block is assigned to every vertex.
+    Threads/block = 256; %256 threads for reduction summation
+    Every thread contains calculates one of the 231 terms used in the summation of the potential
+    shmem shares stores the 231 terms of the potential calculation
+    U[thread_index]  = summation of the 231 terms
+    U[thread_index]  = calculated from the reduction method #3
+    This method should give improved computational time when number of vertices on the sphere is small, even
+    though it wouldnt be a huge time savior.
+    In case of small number of vertices, GPU overload happens because of 256 threads assigned to each vertex.
+    Shared memory for V[21*21], W[21*21].
+    Max shared memory: (256 + 462 + 462)*4bytes ~ 4.7KB
+    Shared memory for V,W. Shared across threads in a block.
+    Advantages: Reduces the computational time immensely for less number of vertices.
+UNLIKE (B), (C) has shared memory for V,W which is shared across all threads in the block
 
-This is a very naive way of calculating the potential. The potential calculation is parallelised for all vertices in individual threads. This is very effective when there are large number of vertices on the sphere and it is beneficial to overload the GPU threads with vertices than with the calculation of 231 terms in different threads.
-Thus, every thread finds the potential of individual vertices.
+(D) optimal_kernel_gravitational3
 
-(B) 
+    Every block is assigned to 16 consecutive vertices.
+    Threads/block = 32;
+    First 16 threads conpute V for the 16 vertices.
+    Next 16 threads in the block compute W for the 16 vertices
+    This method should give improved computational time when fairly large number
+    of vertices on the sphere though it wouldnt be a huge time savior.
+    Shared memory for VW[21*22*16]
+    Max shared memory: (21*22*16)*4bytes ~ 28.875KB < 48KB
+    Shared memory for V,W. Shared across threads in a block.
+    Advantages: Reduces the computational time immensely for fairly large number of vertices.
+    Drawback: Thread warping because first 16 threads compute different from next 16 threads in the block
 
- 
+    WHY 32 threads only::: Limited by the Shared memory
+
+(E) optimal_kernel_gravitational4
+
+    Every block is assigned to 32 consecutive vertices.
+    Threads/block = 64;
+    First 16 threads conpute V for the 16 vertices.
+    Next 16 threads in the block compute W for the 16 vertices
+    This method should give improved computational time when fairly large number
+    of vertices on the sphere though it wouldnt be a huge time savior.
+    Shared memory for VW[21*22*32]
+    Max shared memory: (21*22*32)*4bytes ~ 57.75KB < 64KB
+    NOTE:::::::::: This would work if the shared memory can be expanded to 64 KB.
+    Shared memory for V,W. Shared across threads in a block.
+    Advantages: Reduces the computational time immensely for fairly large number of vertices.
+                No Thread warping because 32 threads do the same action
+                Couldnt verify due to limited shared memory :(
 
 --------------------------------------------------------------------------------
 FILE/CODE STRUCTURE

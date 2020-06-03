@@ -25,9 +25,10 @@ GLOBAL vertex * gpu_out_vertices;
 
 GLOBAL vertex * dev_vertices;
 GLOBAL float * gpu_out_potential;
+GLOBAL vertex * dev_vertices_ICO;
 
 void cuda_cpy_input_data();
-void cuda_cpy_input_data_potential();
+void cuda_cpy_input_data_potential(int vertice_input_type);
 void cuda_cpy_output_data();
 void cuda_cpy_output_data_potential();
 void cudacall_icosphere_naive(int);

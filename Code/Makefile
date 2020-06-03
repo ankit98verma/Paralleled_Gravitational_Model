@@ -57,25 +57,38 @@ CUDA_LINK_FLAGS = -dlink -Wno-deprecated-gpu-targets
 GPP = g++
 FLAGS = -g -Wall -D_REENTRANT -std=c++0x -pthread
 INCLUDE = -I$(CUDA_INC_PATH)
-LIBS = -L$(CUDA_LIB_PATH) -lcudart -lcufft -lsndfile
+LIBS = -L$(CUDA_LIB_PATH) -lcudart -lcufft -lsndfile -lcurand
 
 # ------------------------------------------------------------------------------
 # Make Rules (Project specific)
 # ------------------------------------------------------------------------------
 
 # C++ Object Files
-OBJ = $(addprefix $(OBJDIR)/, $(notdir $(addsuffix .o, $(CPP_FILES))))
+OBJ_CPU = $(addprefix $(OBJDIR)/, $(addprefix cpu-, $(notdir $(addsuffix .o, $(CPP_FILES)))))
+OBJ_GPU = $(addprefix $(OBJDIR)/, $(addprefix gpu-, $(notdir $(addsuffix .o, $(CPP_FILES)))))
+OBJ_BOTH = $(addprefix $(OBJDIR)/, $(addprefix both-, $(notdir $(addsuffix .o, $(CPP_FILES)))))
 
 # Top level rules
-all: grav_run
+all: cpu_run gpu_run both_run
 
-grav_run: $(OBJ) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
-	$(GPP) $(FLAGS) -o grav_run $(INCLUDE) $^ $(LIBS) 
+cpu_run: $(OBJ_CPU) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
+	$(GPP) $(FLAGS) -o cpu_run $(INCLUDE) $^ $(LIBS) 
+
+gpu_run: $(OBJ_GPU) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
+	$(GPP) $(FLAGS) -o gpu_run $(INCLUDE) $^ $(LIBS) 
+
+both_run: $(OBJ_BOTH) $(CUDA_OBJ) $(CUDA_OBJ_FILES)
+	$(GPP) $(FLAGS) -o both_run $(INCLUDE) $^ $(LIBS) 
 
 # Compile C++ Source Files
-$(OBJDIR)/%.cpp.o: src/%.cpp
-	$(GPP) $(FLAGS) -c -o $@ $(INCLUDE) $< 
+$(OBJDIR)/cpu-%.cpp.o: src/%.cpp
+	$(GPP) $(FLAGS) -D CPU_ONLY -c -o $@ $(INCLUDE) $< 
 
+$(OBJDIR)/gpu-%.cpp.o: src/%.cpp
+	$(GPP) $(FLAGS) -D GPU_ONLY -c -o $@ $(INCLUDE) $< 
+
+$(OBJDIR)/both-%.cpp.o: src/%.cpp
+	$(GPP) $(FLAGS) -D CPU_GPU_ONLY -c -o $@ $(INCLUDE) $< 
 
 # Compile CUDA Source Files
 $(OBJDIR)/%.cu.o: src/%.cu
@@ -90,7 +103,7 @@ $(CUDA_OBJ): $(CUDA_OBJ_FILES)
 
 # Clean everything including temporary Emacs files
 clean:
-	rm -f grav_run *.o $(OBJDIR)/*.o *~
+	rm -f cpu_run gpu_run both_run *.o $(OBJDIR)/*.o *~
 	rm -f src/*~
 
 .PHONY: clean
