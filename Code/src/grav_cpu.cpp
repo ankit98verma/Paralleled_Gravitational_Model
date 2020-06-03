@@ -204,7 +204,6 @@ void create_icoshpere(){
 	triangle triag_tmp;
 	for(unsigned int j=1; j<=max_depth; j++){
 
-		// cout << "Adding to depth: " << j << " Starting with Curr face count: " << curr_faces_count<< endl;
 		unsigned int a = curr_faces_count;
 		// go through every face and divide the face into four equal parts
 		for(unsigned int i=0; i<a; i++){
@@ -494,11 +493,6 @@ float spherical_harmonics(vertex R_vec){
         }
     }
 
-//    for (int m=0; m<N_SPHERICAL+1; m++){
-//        for (int n = m; n<N_SPHERICAL+1; n++){
-//        }
-//    }
-
     // Calculate potential
     float C = 0; // Cnm coeff
     float S = 0; // Snm coeff
@@ -512,7 +506,6 @@ float spherical_harmonics(vertex R_vec){
             if (m==0){
                 N = sqrt(2*n+1);
                 C = N*coeff[n][0];
-//                U = C*V[n][0];
             }
             else {
                 p = facprod(n,m);
@@ -520,8 +513,8 @@ float spherical_harmonics(vertex R_vec){
                 C = N*coeff[n][m];
                 S = N*coeff[N_SPHERICAL-n][N_SPHERICAL-m+1];
             }
-            U = U + C*V[n][m] + S*W[n][m];
             // Calculation of the Gravitational Potential Calculation model
+            U = U + C*V[n][m] + S*W[n][m];
         }
     }
     U = U*mhu/R_eq;

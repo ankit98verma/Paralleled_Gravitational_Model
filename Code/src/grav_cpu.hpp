@@ -29,7 +29,6 @@ using std::string;
 #define N_SPHERICAL 				20
 #define N_coeff (N_SPHERICAL+1)*(N_SPHERICAL+2)/2
 
-typedef long long int intL;
 struct vertex
 {
     float x;

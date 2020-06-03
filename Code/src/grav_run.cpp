@@ -21,9 +21,10 @@
 #include <cassert>
 
 #include "ta_utilities.hpp"
-#include "grav_cpu.hpp"
-#include "grav_cuda.cuh"
 #include "helper_cuda.h"
+#include "grav_cuda.cuh"
+#include "grav_cpu.hpp"
+#include "grav_run.hpp"
 
 using namespace std;
 
@@ -58,7 +59,7 @@ cudaEvent_t stop;
 int check_args(int argc, char **argv){
 	if (argc != 3){
         // printf("Usage: ./grav [depth] [thread_per_block] \n");
-        printf("Usage: ./grav [depth] [verbose: 0/1] \n");
+        printf("Usage: ./grav [depth] [verbose: 0/1] [Icosphere optimization level {0 or 1}]  [Geopotential optimization level {0 to 3}]\n");
         return 1;
     }
     return 0;
@@ -115,9 +116,9 @@ void time_profile_cpu(bool verbose, float * res){
  *
  * Return Values:   GPU computational time
 *******************************************************************************/
-void time_profile_gpu(bool verbose, float * res){
+void time_profile_gpu(bool verbose, float * res, int ico_opt_level, int geo_opt_level){
 
-	float gpu_time_icosphere = 0, gpu_time_icosphere2 = 0;
+	float gpu_time_icosphere = 0, gpu_time_fill_vertices = 0;
 	float gpu_time_indata_cpy = 0;
 	float gpu_time_outdata_cpy = 0;
 	float gpu_time_gravitational = 0;
@@ -125,15 +126,29 @@ void time_profile_gpu(bool verbose, float * res){
 
 	cudaError err;
 
-
 	START_TIMER();
 		cuda_cpy_input_data();
 		cuda_cpy_input_data1();
 	STOP_RECORD_TIMER(gpu_time_indata_cpy);
 
-	START_TIMER();
-		cudacall_icosphere_naive(1024);
-	STOP_RECORD_TIMER(gpu_time_icosphere);
+	switch(ico_opt_level){
+		case ICO_NAVIE:
+			START_TIMER();
+				cudacall_icosphere_naive(ICOSPHERE_GPU_THREAD_NUM);
+			STOP_RECORD_TIMER(gpu_time_icosphere);
+			break;
+		case ICO_OPT1:
+			START_TIMER();
+				cudacall_icosphere(ICOSPHERE_GPU_THREAD_NUM);
+			STOP_RECORD_TIMER(gpu_time_icosphere);
+			break;
+		
+		default:
+			cout << "Wrong input for Icosphere generation optimization" << endl;
+			res[0] = -1;
+			res[1] = -1;
+			return;
+	}
 	err = cudaGetLastError();
     if (cudaSuccess != err){
         cerr << "Error " << cudaGetErrorString(err) << endl;
@@ -142,29 +157,10 @@ void time_profile_gpu(bool verbose, float * res){
         	cerr << "No kernel error detected" << endl;
     }
 
-	free_gpu_memory();
-	free_gpu_memory1();
-
-	START_TIMER();
-		cuda_cpy_input_data();
-		cuda_cpy_input_data1();
-	STOP_RECORD_TIMER(gpu_time_indata_cpy);
-
-	START_TIMER();
-		cudacall_icosphere(1024);
-	STOP_RECORD_TIMER(gpu_time_icosphere2);
-	err = cudaGetLastError();
-    if (cudaSuccess != err){
-        cerr << "Error " << cudaGetErrorString(err) << endl;
-    }else{
-    	if(verbose)
-        	cerr << "No kernel error detected" << endl;
-    }
-
-    float tmp = 0;
+    float gpu_time_fill_vertices = 0;
     START_TIMER();
     	cudacall_fill_vertices(1024);
-    STOP_RECORD_TIMER(tmp);
+    STOP_RECORD_TIMER(gpu_time_fill_vertices);
 	err = cudaGetLastError();
     if (cudaSuccess != err){
         cerr << "Error " << cudaGetErrorString(err) << endl;
@@ -186,7 +182,6 @@ void time_profile_gpu(bool verbose, float * res){
     STOP_RECORD_TIMER(gpu_time_gravitational);
 
 
-
     err = cudaGetLastError();
     if (cudaSuccess != err){
         cerr << "Potential Error " << cudaGetErrorString(err) << endl;
@@ -202,9 +197,8 @@ void time_profile_gpu(bool verbose, float * res){
 
 	if(verbose){
 		printf("GPU Input data copy time: %f ms\n", gpu_time_indata_cpy);
-	    printf("GPU Naive Icosphere generation time: %f ms\n", gpu_time_icosphere);
-	    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere2);
-	    printf("GPU Fill vertices: %f ms\n", tmp);
+	    printf("GPU Icosphere generation time: %f ms\n", gpu_time_icosphere);
+	    printf("GPU Fill vertices: %f ms\n", gpu_time_fill_vertices);
 		printf("GPU potential calculation: %f ms\n", gpu_time_gravitational);
 		printf("GPU NAIVE potential calculation: %f ms\n", naive_gpu_time_gravitational);
 		printf("GPU Output data copy time: %f ms\n", gpu_time_outdata_cpy);
@@ -252,7 +246,7 @@ void verify_gpu_potential(bool verbose){
 
 
 /*******************************************************************************
- * Function:        verify_gpu_output
+ * Function:        verify_gpu_icosphere
  *
  * Description:     Computes the difference between the CPU and GPU vertices
  *
@@ -261,7 +255,7 @@ void verify_gpu_potential(bool verbose){
  *
  * Return Values:   none
 *******************************************************************************/
-void verify_gpu_output(bool verbose){
+void verify_gpu_icosphere(bool verbose){
 
 	vertex * v = (vertex *)faces;
 	vertex * gpu_out_v = (vertex *)gpu_out_faces;
@@ -357,7 +351,7 @@ void export_tmp(){
  *
  * Return Values:   none
 *******************************************************************************/
-void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res){
+void run(int depth, float radius, bool verbose, int ico_opt_level, int geo_opt_level, float * cpu_res, float * gpu_res){
 
 	init_vars(depth, radius);
 	allocate_cpu_mem(verbose);
@@ -375,7 +369,7 @@ void run(int depth, float radius, bool verbose, float * cpu_res, float * gpu_res
 
 //	 if(verbose)
 //	 	cout << "\n----------Verifying GPU Icosphere----------\n" << endl;
-//	 verify_gpu_output(verbose);
+//	 verify_gpu_icosphere(verbose);
 
 //	/************************** TMP *****************************/
 //
@@ -439,7 +433,8 @@ int main(int argc, char **argv) {
 
 	float cpu_times[2],gpu_times[2];
 
-	run(len, 1, (bool)atoi(argv[2]), cpu_times, gpu_times);
+	float r = 0;
+	run(len, r, (bool)atoi(argv[2]),, (bool)atoi(argv[3]), (bool)atoi(argv[4]) cpu_times, gpu_times);
 
 
     return 1;
