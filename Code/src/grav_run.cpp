@@ -174,7 +174,7 @@ void time_profile_gpu(bool verbose, float * res){
     }
 
 //    START_TIMER();
-////        optimal_cudacall_gravitational(512);
+// //        optimal_cudacall_gravitational(512);
 //        naive_cudacall_gravitational(512);
 //    STOP_RECORD_TIMER(naive_gpu_time_gravitational);
 
@@ -182,7 +182,7 @@ void time_profile_gpu(bool verbose, float * res){
     START_TIMER();
 //        optimal_cudacall_gravitational(256);
 //        optimal_cudacall_gravitational3();
-        optimal_cudacall_gravitational4();
+        optimal_cudacall_gravitational3();
     STOP_RECORD_TIMER(gpu_time_gravitational);
 
 
