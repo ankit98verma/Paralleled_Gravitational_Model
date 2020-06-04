@@ -349,9 +349,23 @@ int main(int argc, char **argv) {
 	if(check_args(argc, argv))
 		return 0;
 
-	TA_Utilities::select_coldest_GPU();
 
 	int len = atoi(argv[1]);
+	int thres = 10;
+
+#ifdef GPU_ONLY
+	thres = 12;
+#endif
+
+	if(len >= thres){
+		cout << "Depth should be less than " << thres << endl;
+		cout << "Exiting! " << endl;
+		return -1;
+	}
+	
+	// select the coldest CPU
+	TA_Utilities::select_coldest_GPU();
+
 	int ico_opt_level = atoi(argv[3]);
 	int geo_opt_level = atoi(argv[4]);
 	bool verbose = (bool)atoi(argv[2]);
@@ -366,9 +380,6 @@ int main(int argc, char **argv) {
 	float r = 1;
 	run(len, r, ico_opt_level, geo_opt_level, verbose, cpu_times, gpu_times);
 
-	// export_gpu_outputs(verbose);
-	// export_cpu_outputs(verbose);
-    
     return 1;
 }
 
