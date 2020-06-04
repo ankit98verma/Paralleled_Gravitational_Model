@@ -10,21 +10,16 @@
 #include <cstdlib>
 #include <cmath>
 #include <cstring>
-#include <vector>
 #include <fstream>
 #include <iostream>
-#include <time.h>
 #include <iomanip>
 
 #include <cuda_runtime.h>
-#include <algorithm>
-#include <cassert>
 
-#include "ta_utilities.hpp"
-#include "grav_cpu.hpp"
 #include "grav_cuda.cuh"
-#include "cuda_calls_helper.h"
+
 #include "grav_run.hpp"
+#include "ta_utilities.hpp"
 
 using namespace std;
 
@@ -200,10 +195,6 @@ void time_profile_gpu(bool verbose, int ico_opt_level, int geo_opt_level, float 
 			return;
 	}
 
-    // START_TIMER();
-    // 	cudacall_fill_vertices(ICOSPHERE_GPU_THREAD_NUM);
-    // STOP_RECORD_TIMER(gpu_time_fill_vertices);
-
 	err = cudaGetLastError();
     if (cudaSuccess != err){
         cerr << "Error " << cudaGetErrorString(err) << endl;
@@ -355,15 +346,17 @@ void run(int depth, float radius, int ico_opt_level, int geo_opt_level, bool ver
 *******************************************************************************/
 int main(int argc, char **argv) {
 
-	// TA_Utilities::select_coldest_GPU();
 	if(check_args(argc, argv))
 		return 0;
 
-	int len = atoi(argv[1]);
+	TA_Utilities::select_coldest_GPU();
 
+	int len = atoi(argv[1]);
 	int ico_opt_level = atoi(argv[3]);
 	int geo_opt_level = atoi(argv[4]);
-	if((bool)atoi(argv[2]))
+	bool verbose = (bool)atoi(argv[2]);
+	
+	if(verbose)
 		cout << "Verbose ON" << endl;
 	else
 		cout << "Verbose OFF" << endl;
@@ -371,8 +364,11 @@ int main(int argc, char **argv) {
 	float cpu_times[2],gpu_times[2];
 
 	float r = 1;
-	run(len, r, ico_opt_level, geo_opt_level, (bool)atoi(argv[2]), cpu_times, gpu_times);
+	run(len, r, ico_opt_level, geo_opt_level, verbose, cpu_times, gpu_times);
 
+	// export_gpu_outputs(verbose);
+	// export_cpu_outputs(verbose);
+    
     return 1;
 }
 
@@ -418,8 +414,6 @@ void verify_gpu_icosphere(bool verbose){
     }
 }
 
-
-
 /*******************************************************************************
  * Function:        verify_gpu_potential
  *
@@ -451,6 +445,16 @@ void verify_gpu_potential(bool verbose){
     }
 }
 
+/*******************************************************************************
+ * Function:        export_gpu_outputs
+ *
+ * Description:     Exports the gpu_vertices, gpu_sorted_vertices, and gpu_potentials
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   none
+*******************************************************************************/
 void export_gpu_outputs(bool verbose){
 
 	cout << "Exporting: gpu_sorted_vertices.csv"<<endl;
@@ -491,6 +495,16 @@ void export_gpu_outputs(bool verbose){
 
 }
 
+/*******************************************************************************
+ * Function:        export_cpu_outputs
+ *
+ * Description:     Exports the cpu_vertices, cpu_edges, and cpu_potentials
+ *
+ * Arguments:       bool verbose: If true then it will prints messages on the c
+ *                  console
+ *
+ * Return Values:   none
+*******************************************************************************/
 void export_cpu_outputs(bool verbose){
 
 	cout << "Exporting: cpu_vertices.csv"<<endl;
@@ -499,6 +513,7 @@ void export_cpu_outputs(bool verbose){
 	ofstream obj_stream;
 	obj_stream.open(filename1);
 	obj_stream << "x, y, z" << endl;
+	cout <<"-----------------------" << endl;
 	for(unsigned int i=0; i< vertices_length; i++){
 		obj_stream << vertices[i].x << ", " << vertices[i].y << ", " << vertices[i].z << endl;
 	}
@@ -509,6 +524,7 @@ void export_cpu_outputs(bool verbose){
     ofstream obj_stream2;
 	obj_stream2.open("results/cpu_edges.csv");
 	obj_stream2 << "x1, y1, z1, x2, y2, z2" << endl;
+	cout <<"-----------------------" << endl;
 	for(unsigned int i=0; i<3*faces_length; i++){
 		triangle triangle_tmp = faces[i];
 		for(int j=0; j<3;j++)
