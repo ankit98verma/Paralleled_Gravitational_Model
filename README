@@ -217,17 +217,19 @@ Following is the file and code structure:
 │   │   │   ├── gp2D_7.png
 │   │   │   ├── gp2D_8.png
 │   │   │   └── gp2D_9.png
-│   │   └── Maps_3D
-│   │       ├── gp3D_0.png
-│   │       ├── gp3D_1.png
-│   │       ├── gp3D_2.png
-│   │       ├── gp3D_3.png
-│   │       ├── gp3D_4.png
-│   │       ├── gp3D_5.png
-│   │       ├── gp3D_6.png
-│   │       ├── gp3D_7.png
-│   │       ├── gp3D_8.png
-│   │       └── gp3D_9.png
+│   │   ├── Maps_3D
+│   │   │   ├── gp3D_0.png
+│   │   │   ├── gp3D_1.png
+│   │   │   ├── gp3D_2.png
+│   │   │   ├── gp3D_3.png
+│   │   │   ├── gp3D_4.png
+│   │   │   ├── gp3D_5.png
+│   │   │   ├── gp3D_6.png
+│   │   │   ├── gp3D_7.png
+│   │   │   ├── gp3D_8.png
+│   │   │   └── gp3D_9.png
+│   │   ├── potential_time.xlsx         -> The excel sheet containing the time profile of GPU potential calculation code
+│   │   └── time_profile.ods            -> The excel sheet containing the time profile of GPU icosphere generation code
 │   ├── src
 │   │   ├── cuda_calls_helper.h         -> The cuda call helper file
 │   │   ├── grav_cpu.cpp                -> The CPU code of the project
