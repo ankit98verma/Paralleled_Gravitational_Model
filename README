@@ -40,7 +40,7 @@ The generation of uniformly distributed set of points is done in two steps:
     b) Removal of duplicate vertices from the list of vertices which is obtained from list of faces.
         i.  Sort the list of vertices obtained from the list of faces with respect to the sum of x, y and z component of the vertices. This will club all the vertices with same sum of components together. Note that the vertices with same sum of components need not be equal to each other. Hence this will require to process the output further which is described in the next step.
         ii. Go through the vertices whose sum of components are equal and mark the duplicate vertices.
-        iii.Remove the duplicate vertices.
+        iii.Remove the duplicate vertices and give the final array of vertices.
 
 We have two algorithms for generating the icosphere whose approach to the problem is described as briefly:
 (A) Navie GPU icosphere generation
@@ -60,6 +60,30 @@ Once the array has been sorted, the dupicate vertices are marked and removed.
 
 Note that each vertices consists of 3 floating points and it will a huge burden on the memory to directly sort the vertices hence instead of sorting the vertices we sort the "indices" of the vertices based on the sum of components of the vertices. Once the sorting of the "indices" of the vertices is complete then we update the position of vertices in the vertices array accroding to the sorted array of "indices".
 
+A COMPARISON ON THE COMPUTATIONAL RUN TIME on icosphere generation and filling the vertices for CPU and different algorithm is shown below.
+
+*************************************************************************************************************************
+        |                   CPU                     |                               GPU                                 |
+        -----------------------------------------------------------------------------------------------------------------
+Depth   |   Icosphere(ms)   |   Fill Vertices ms)   |           Icosphere (ms)      |           Fill Vertices(ms)       |
+        |                   |                       |--------------------------------------------------------------------
+        |                   |                       |   Naive       |   Optimized   |   Naive           |   Optimized   |
+-------------------------------------------------------------------------------------------------------------------------
+0       |   0.004096        |   0.010976            |   0.02512     |   0.025088    |   0.14032         |   0.1368      |
+1       |   0.012032        |   0.03808             |   0.053568    |   0.033952    |   0.370208        |   0.209408    |
+2       |   0.025984        |   0.181376            |   0.076896    |   0.045504    |   1.19376         |   0.431808    |
+3       |   0.098048        |   0.996384            |   0.116512    |   0.067808    |   4.220512        |   0.46304     |
+4       |   0.366656        |   5.72304             |   0.193504    |   0.092896    |   0.193504        |   0.495488    |
+5       |   1.436832        |   36.507679           |   0.277184    |   0.153696    |   65.428452       |   0.889632    |
+6       |   5.754272        |   209.055237          |   0.380128    |   0.266752    |   263.786285      |   2.496576    |
+7       |   23.199455       |   1186.422852         |   0.69552     |   0.635104    |   990.288147      |   8.966912    |
+8       |   95.330658       |   8339.12793          |   1.97264     |   2.28368     |   4040.03833      |   40.978081   |
+9       |   332.109558      |   59076.25            |   7.600992    |   8.520064    |   16494.310547    |   169.167038  |
+10      |   -               |   -                   |   -           |   33.302719   |   -               |   727.909668  |
+11      |   -               |   -                   |   -           |   133.33728   |   -               |   2737.139648 |
+*************************************************************************************************************************
+
+The '-' has been put wherever the output is not applicable.
 
 2. Potential Calculation
 
@@ -173,6 +197,8 @@ FILE/CODE STRUCTURE
 
 Following is the file and code structure:
 
+*TODO*
+
 CPU_Demo
 │   README  -> The README file of the project containing the details of the prject and instructions
 └───Code
@@ -236,32 +262,13 @@ Please follow the following instructions:
 
 
 --------------------------------------------------------------------------------
-Output:
-Since for large values of depth of icosphere the CPU takes a lot of time to run hence we are providing the results of running the "grav_run" till depth level 10, which is as follows:
+LIMITATION:
+The curren program has following limitation:
 
-**********************************************************************************
-|  Depth |                        |       CPU time (ms)   |                      |
-|--------|------------------------|-----------------------|----------------------|
-|        |Icosphere (ms){Ankit}   |Potential (ms){Garima} |    Total (ms)        |
-|    0   |       0.013856         |       0.341984        |        0.35584       |
-|    1   |       0.055328         |         1.1599        |        1.21523       |
-|    2   |        0.18416         |        4.44883        |        4.63299       |
-|    3   |       0.815232         |        14.5983        |        15.4135       |
-|    4   |        4.62538         |        58.1904        |        62.8158       |
-|    5   |         27.998         |         232.07        |        260.068       |
-|    6   |        178.649         |        939.229        |        1117.88       |
-|    7   |        1168.84         |        3713.31        |        4882.14       |
-|    8   |        8122.81         |        14925.8        |        23048.6       |
-|    9   |        58224.5         |        59715.9        |         117940       |
-|    10  |        436761          |        238408         |         675169       |
-**********************************************************************************
+1. Depth has to be less than 12: This is at depth 12 the number of vertices is large enough to cause the illegal memory access in CUDA.
+2. Icosphere Naive cannot run for depth 10 or more. Same reason as point 1. 
 
-
-
-As shown above the total time for CPU goes well above 10 mintues for depth 10.
---------------------------------------------------------------------------------
  
-
 --------------------------------------------------------------------------------
 Future Work:
 Similar to using the spherical harmonic coefficients for Geopotential model, similar model can be generated for other known bodies in space, like asteroids, whose geopotential model would be interesting to study in the field of astrodynamics.
@@ -271,3 +278,4 @@ We can also compute the gravitational acceleration just like gravitational poten
 References:
 Geopotential model: Satellite Orbits, by Oliver Montebruck
 Geodesic polyhedron: https://en.wikipedia.org/wiki/Geodesic_polyhedron
+Icosphere generation: http://www.songho.ca/opengl/gl_sphere.html

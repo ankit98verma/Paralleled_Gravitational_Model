@@ -25,7 +25,8 @@
 using namespace std;
 
 
-/*Reference: http://www.songho.ca/opengl/gl_sphere.html*/
+/*Reference for this file: http://www.songho.ca/opengl/gl_sphere.html*/
+
 float const H_ANG = PI/180*72;
 float const ELE_ANG = atanf(1.0f / 2);	// elevation = 26.565 degree
 unsigned int curr_faces_count;
